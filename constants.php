@@ -10,6 +10,8 @@ $wait = [
     "cache".DS."Cache",
     "cache".DS."FileCacheDriver",
     "cache".DS."ApcuCacheDriver",
+    "cache".DS."CacheException",
+    "log".DS."Logger",
     "autoload".DS."Loader"
 ];
 

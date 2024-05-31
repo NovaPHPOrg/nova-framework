@@ -13,10 +13,10 @@ class Cache {
         }
         try {
             if (!class_exists($driver) || !in_array('nova\framework\cache\iCacheDriver', class_implements($driver))) {
-                throw new \Exception('Cache driver not found');
+                throw new CacheException("Cache driver {$driver} not found");
             }
             $this->driver = new $driver($shared);
-        } catch (\Exception $e) {
+        } catch (CacheException $e) {
             $this->driver = new FileCacheDriver($shared);
         }
     }

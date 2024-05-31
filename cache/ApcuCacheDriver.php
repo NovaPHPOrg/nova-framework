@@ -16,7 +16,7 @@ class ApcuCacheDriver implements iCacheDriver
      */
     public function __construct($shared = false) {
         if (!extension_loaded('apcu')) { //如果没有apcu扩展，则使用文件缓存
-            throw new Exception('APCu extension is not loaded');
+            throw new CacheException('APCu extension is not loaded');
         }
         if($shared) {
             $this->prefix = 'nova_';
