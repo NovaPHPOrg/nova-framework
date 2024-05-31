@@ -20,3 +20,5 @@ foreach ($wait as $file) {
 }
 
 (new autoload\Loader())->register();
+error_reporting(E_ALL & ~(E_STRICT | E_NOTICE));
+ini_set("display_errors", "Off");

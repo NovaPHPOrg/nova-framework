@@ -7,7 +7,7 @@ use cache\FileCacheDriver;
 class Cache {
     private iCacheDriver $driver;
     public function __construct($shared = false,$driverClazz = null){
-        $driver = $GLOBALS['__nova_app_config__']['cache_driver'];
+        $driver = $GLOBALS['__nova_app_config__']['cache_driver']??null;
         if($driverClazz != null){
             $driver = $driverClazz;
         }
@@ -26,7 +26,7 @@ class Cache {
          $this->driver->set($key, $value, $ttl);
     }
 
-    public function get($key, $default = null) {
+    public function get($key,$default = null): mixed{
         return $this->driver->get($key, $default);
     }
 
