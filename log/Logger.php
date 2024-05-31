@@ -33,6 +33,11 @@ class Logger
         $m_timestamp = sprintf("%.3f", microtime(true));
         $timestamp = floor($m_timestamp);
         $milliseconds = str_pad(strval(round(($m_timestamp - $timestamp) * 1000)), 3, "0");
+        //定位到是哪一行调用输出日志
+        $trace = debug_backtrace();
+        //只要文件名
+        $file = basename($trace[1]['file']);
+        $msg = '[ ' . $file . ':' . $trace[1]['line'] . ' ] '.$msg ;
         $str = '[ ' . date('Y-m-d H:i:s', $timestamp) . '.' . $milliseconds . ' ] [ ' . $type . ' ] ' . $msg . "\n";
         fwrite($this->handle, $str);
     }
