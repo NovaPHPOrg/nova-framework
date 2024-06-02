@@ -96,8 +96,14 @@ class Response
         ini_set('zlib.output_compression', false);
     }
 
+    private function filterFilePath(string $filePath):string
+    {
+        return str_replace(["../","./","..\\",".\\","//","\\","\/","/\\"],'',$filePath);
+    }
     public function withFile(string $filePath,string $fileName): void
     {
+        $filePath = $this->filterFilePath($filePath);
+        Logger::info("Response file: $filePath");
         if (file_exists($filePath)) {
             $this->data = $filePath;
             $this->header['Content-Disposition'] = 'attachment; filename="' . $fileName . '"';
@@ -222,6 +228,7 @@ class Response
             return;
         }
         $fileSize = filesize($this->data);
+
         $range = $this->parseRange($fileSize);
 
         if ($range !== null) {
@@ -289,6 +296,8 @@ class Response
     private function sendStatic(): void
     {
         $addr = $this->data;
+        $addr = $this->filterFilePath($addr);
+        Logger::info("Response file: $addr");
         // 验证文件是否存在且可读
         if (!file_exists($addr) || !is_readable($addr)) {
             $this->code = 404;
