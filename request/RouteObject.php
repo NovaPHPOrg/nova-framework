@@ -2,6 +2,8 @@
 
 namespace nova\framework\request;
 
+use exception\AppExitException;
+
 class RouteObject
 {
     public string $module;
@@ -34,12 +36,48 @@ class RouteObject
         }
     }
 
+    /**
+     * @throws ControllerException
+     */
+    public function checkSelf(): void
+    {
+        $controllerName = ucfirst( $this->controller);
+        $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
+        if (!class_exists($controllerClazz)) {
+           throw new ControllerException("Controller not found: $controllerClazz", $this);
+        }
+        if(method_exists($controllerClazz, $this->action)){
+            throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
+        }
+        //检查函数返回类型是否为Response
+        try {
+            $reflection = new \ReflectionMethod($controllerClazz, $this->action);
+            $returnType = $reflection->getReturnType();
+            if ($returnType == null || $returnType->getName() != "nova\\framework\\request\\Response") {
+                throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}",$this);
+            }
+        }catch (\ReflectionException $e){
+            throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
+        }
+
+    }
+
     public function __toString(): string
     {
         return $this->module . "/" . $this->controller . "/" . $this->action;
     }
 
-
+    /**
+     * @throws AppExitException
+     */
+    public function run(Request $request): void
+    {
+        $controllerName = ucfirst( $this->controller);
+        $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
+        $controller = new $controllerClazz($request);
+       $response = $controller->{$this->action}(...$this->params);
+        throw new AppExitException($response);
+    }
 
 
 }

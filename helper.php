@@ -4,12 +4,12 @@ namespace nova\framework;
 
 use nova\framework\log\Logger;
 use nova\framework\request\RouteObject;
-use nova\framework\text\Text;
 
-function runtime($msg): void
+function runtime($msg): float
 {
     $t = (microtime(true) - $GLOBALS['__nova_app_start__'])  * 1000;
     Logger::info("$msg run in $t ms");
+    return $t;
 }
 
 function route($module = "", $controller = "", $action = "",$params = []): RouteObject

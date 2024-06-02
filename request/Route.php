@@ -46,8 +46,9 @@ class Route
      * @param string $uri
      * @param string $method
      * @return RouteObject|null
+     * @throws ControllerException
      */
-    public static function dispatch(string $uri,string $method): RouteObject|null
+    public static function dispatch(string $uri,string $method): RouteObject
     {
        $uri = self::removeQueryStringVariables($uri);
 
@@ -98,6 +99,11 @@ class Route
                 break;
             }
         }
+
+        if ($routeObj == null) {
+            throw new ControllerException("Route not found: $uri");
+        }
+
         return $routeObj;
     }
 

@@ -18,10 +18,37 @@ class Request
         $this->module = $module;
     }
 
+
+    public function get(string $key = null, mixed $default = null): mixed
+    {
+       return Argument::get($key,$default);
+    }
+
+    public function post(string $key = null, mixed $default = null): mixed
+    {
+        return Argument::post($key,$default);
+    }
+
+    public function arg(string $key = null, mixed $default = null): mixed
+    {
+        return Argument::arg($key,$default);
+    }
+
+    public function json(): array
+    {
+        return Argument::json();
+    }
+
+    public function raw(): string
+    {
+        return Argument::raw();
+    }
+
     public function getModule(): string
     {
         return $this->module;
     }
+
 
     public function getController(): string
     {
@@ -79,8 +106,77 @@ class Request
             }
         }
     }
+    /**
+     * 获取浏览器的http协议
+     * @return string
+     */
+    function getHttpScheme(): string
+    {
+        static $httpScheme = null;
+
+        if ($httpScheme !== null) {
+            return $httpScheme;
+        }
+
+        // 判断是否为 HTTPS
+        if ($this->isHttps()) {
+            $httpScheme = 'https://';
+        } else {
+            $httpScheme = 'http://';
+        }
+
+        return $httpScheme;
+    }
+
+    private function isHttps(): bool
+    {
+        return (
+            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+            (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) === 'on') ||
+            (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
+        );
+    }
 
 
+    /**
+     * 获取域名，无端口
+     * 例如：example.com
+     * @return string
+     */
+    public  function getDomainNoPort(): string
+    {
+        return $_SERVER["SERVER_NAME"];
+    }
+
+    /**
+     * 获取域名
+     * 例如：example.com 或 example.com:8088
+     * @return string
+     */
+    public  function getDomain(): string
+    {
+        return $_SERVER["HTTP_HOST"];
+    }
+
+    /**
+     * 获取当前访问的地址
+     * 例如：https://example.com/index/main
+     * @return string
+     */
+    public  function getNowAddress(): string
+    {
+        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
+    }
+
+    /**
+     * 获取当前服务器IP
+     * 例如：127.0.0.1
+     */
+    public  function getServerIp(): string
+    {
+        return gethostbyname(gethostname());
+    }
 
     /**
      * 获取客户端真实IP
