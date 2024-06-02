@@ -65,13 +65,21 @@ class App
 
             $this->request = new Request($this->route->module, $this->route->controller, $this->route->action);
 
+            if ($this->application != null) {
+                $this->application->onAppStart();
+            }
+
             $this->route->run($this->request);
+
 
         } catch (AppExitException $exception) {
             Logger::info("App Exit Exception: " . $exception->getMessage());
             //获取渲染引擎
             $response = $exception->response();
             $response->send();
+            if ($this->application != null) {
+                $this->application->onAppEnd();
+            }
         } catch (ControllerException $exception) {
             Logger::info("Controller Exception: " . $exception->getMessage());
             $response = null;
@@ -128,8 +136,4 @@ class App
         return $this->request;
     }
 
-    function checkDomain()
-    {
-
-    }
 }

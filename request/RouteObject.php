@@ -2,7 +2,8 @@
 
 namespace nova\framework\request;
 
-use exception\AppExitException;
+
+use nova\framework\exception\AppExitException;
 
 class RouteObject
 {
@@ -46,7 +47,7 @@ class RouteObject
         if (!class_exists($controllerClazz)) {
            throw new ControllerException("Controller not found: $controllerClazz", $this);
         }
-        if(method_exists($controllerClazz, $this->action)){
+        if(!method_exists($controllerClazz, $this->action)){
             throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
         }
         //检查函数返回类型是否为Response
@@ -75,7 +76,7 @@ class RouteObject
         $controllerName = ucfirst( $this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
         $controller = new $controllerClazz($request);
-       $response = $controller->{$this->action}(...$this->params);
+        $response = $controller->{$this->action}(...$this->params);
         throw new AppExitException($response);
     }
 

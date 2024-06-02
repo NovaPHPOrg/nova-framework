@@ -3,7 +3,6 @@
 namespace nova\framework\request;
 
 use nova\framework\log\Logger;
-use nova\framework\text\Json;
 use function nova\framework\route;
 
 class Route
@@ -45,7 +44,7 @@ class Route
     /**
      * @param string $uri
      * @param string $method
-     * @return RouteObject|null
+     * @return RouteObject
      * @throws ControllerException
      */
     public static function dispatch(string $uri,string $method): RouteObject
@@ -128,6 +127,8 @@ class Route
         if (sizeof($parts) > 1) {
             $uri = $parts[0];
         }
+        $uri =  str_replace(["/public/index.php", "/index.php"], "", $uri);
+        Logger::info("Route removeQueryStringVariables: $uri");
         return $uri;
     }
 

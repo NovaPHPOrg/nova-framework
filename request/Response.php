@@ -3,9 +3,10 @@
 namespace nova\framework\request;
 
 use nova\framework\App;
-use nova\framework\log\Logger;
 use nova\framework\text\Json;
 use nova\framework\text\JsonEncodeException;
+use SimpleXMLElement;
+use function nova\framework\file_type;
 
 class Response
 {
@@ -119,8 +120,8 @@ class Response
         $this->header["Server"] = "Apache";
         $this->header["X-Powered-By"] = "NovaPHP";
         $this->header["Date"] = gmdate('D, d M Y H:i:s T');
-
-
+        ob_end_clean();
+        ob_implicit_flush(1);
 
         switch ($this->type) {
             case ResponseType::JSON:
@@ -179,8 +180,7 @@ class Response
     protected function sendSSE(): void
     {
         set_time_limit(0);
-        ob_end_clean(); //清空(擦除)缓冲区并关闭输出缓冲
-        ob_implicit_flush(1); //这个函数强制每当有输出的时候，即刻把输出发送到浏览器。这样就不需要每次输出(echo)后，都用flush()来发送到浏览器了
+
         $callback = $this->data;
         $this->sendHeaders();
         while (true) {
@@ -282,7 +282,7 @@ class Response
             echo "File not found.";
             return;
         }
-        $this->header["Content-Type"] = mime_content_type($addr);
+        $this->header["Content-Type"] = file_type($addr);
         $lastModifiedTime = filemtime($addr);
         $etag = md5_file($addr);
         // 检查 If-Modified-Since 和 If-None-Match 头
@@ -304,8 +304,6 @@ class Response
 
         // 清空输出缓冲区，确保文件流输出正确
         $this->sendHeaders();
-        ob_clean();
-        flush();
 
         // 读取并输出文件内容
         readfile($addr);
@@ -322,40 +320,52 @@ class Response
         }
         $this->sendHeaders();
         echo $send;
-        ob_clean();
-        flush();
+    }
+   private function arrayToXml($data, &$xmlData): void
+   {
+        foreach ($data as $key => $value) {
+            if (is_numeric($key)) {
+                $key = 'item' . $key; // 数字键使用“item”前缀
+            }
+            if (is_array($value)) {
+                $subNode = $xmlData->addChild($key);
+                $this->arrayToXml($value, $subNode);
+            } else {
+                $xmlData->addChild($key, htmlspecialchars($value));
+            }
+        }
     }
 
+    private  function convertArrayToXml($array, $rootElement = 'root', $xmlVersion = '1.0', $xmlEncoding = 'UTF-8'):string {
+        $xmlData = new SimpleXMLElement("<?xml version=\"$xmlVersion\" encoding=\"$xmlEncoding\"?><$rootElement></$rootElement>");
+        $this->arrayToXml($array, $xmlData);
+        return $xmlData->asXML();
+    }
     private function sendXml(): void
     {
+        $xmlStr = "";
         try {
-            $xml = new \SimpleXMLElement('<root/>');
-            array_walk_recursive($this->data, [$xml, 'addChild']);
+            $xmlStr = $this->convertArrayToXml($this->data);
         }catch (\Exception $e){
             $this->code = 500;
             $xml = new \SimpleXMLElement('<root/>');
             $xml->addChild("Server Error");
+            $xmlStr = $xml->asXML();
         }
 
         $this->sendHeaders();
-        echo $xml->asXML();
-        ob_clean();
-        flush();
+        echo $xmlStr;
     }
 
     private function sendHtml(): void
     {
         $this->sendHeaders();
         echo $this->data;
-        ob_clean();
-        flush();
     }
 
     private function sendText(): void
     {
         $this->sendHeaders();
         echo $this->data;
-        ob_clean();
-        flush();
     }
 }
