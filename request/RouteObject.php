@@ -44,8 +44,12 @@ class RouteObject
     {
         $controllerName = ucfirst( $this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
+        //还要检查$controllerClazz是否为Controller的子类
         if (!class_exists($controllerClazz)) {
            throw new ControllerException("Controller not found: $controllerClazz", $this);
+        }
+        if (!is_subclass_of($controllerClazz, Controller::class)) {
+            throw new ControllerException("Controller must extends Controller: $controllerClazz", $this);
         }
         if(!method_exists($controllerClazz, $this->action)){
             throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
@@ -76,6 +80,10 @@ class RouteObject
         $controllerName = ucfirst( $this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
         $controller = new $controllerClazz($request);
+        $init = $controller->init();
+        if ($init instanceof Response){
+            throw new AppExitException($init);
+        }
         $response = $controller->{$this->action}(...$this->params);
         throw new AppExitException($response);
     }

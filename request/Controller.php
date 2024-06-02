@@ -9,4 +9,11 @@ class Controller
     {
         $this->request = $request;
     }
+    /**
+     * @return Response|null
+     */
+    public function init():?Response
+    {
+        return null;
+    }
 }
