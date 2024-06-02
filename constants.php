@@ -11,6 +11,10 @@ $serverName = $_SERVER["HTTP_HOST"];
 if (!in_array("0.0.0.0", $domains) &&  !in_array($serverName,$domains)) {
     exit("[ NovaPHP ] Domain Error ：".htmlspecialchars($serverName)." not in config.domain list.");
 }
+
+//CORS
+header("Access-Control-Allow-Origin: *");
+
 $wait = [
     "cache".DS."iCacheDriver",
     "cache".DS."Cache",

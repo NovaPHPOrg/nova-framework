@@ -3,6 +3,7 @@
 namespace nova\framework\request;
 
 use nova\framework\App;
+use nova\framework\log\Logger;
 use nova\framework\text\Json;
 use nova\framework\text\JsonEncodeException;
 use SimpleXMLElement;
@@ -180,7 +181,6 @@ class Response
     protected function sendSSE(): void
     {
         set_time_limit(0);
-
         $callback = $this->data;
         $this->sendHeaders();
         while (true) {
@@ -190,11 +190,20 @@ class Response
             }elseif (!$result){
                break;
             }else{
-                $echo = "event: ".$result["event"] . PHP_EOL; //定义事件
-                $echo .= "data: " . $result["data"] . PHP_EOL; //推送内容
-                $echo .= PHP_EOL; //必须以两个换行符结尾
+                if(!isset($result["event"]) || !isset($result["data"])){
+                    $echo = "data: \n\n";
+                    Logger::warning("SSE data format error, event and data is required");
+                }else{
+                    $echo = "event: ".$result["event"] . PHP_EOL;
+                    $echo .= "data: " . $result["data"] . PHP_EOL;
+                    $echo .= PHP_EOL;
+                }
             }
+            Logger::info("SSE: $echo");
             echo $echo;
+            if (connection_aborted()) {
+                break;
+            }
             sleep(1);
         }
     }
