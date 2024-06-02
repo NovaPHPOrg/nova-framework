@@ -1,4 +1,5 @@
 <?php
+
 namespace nova\framework;
 include "helper.php";
 const VERSION = "5.0.0"; //框架版本
@@ -8,25 +9,22 @@ define("DS", DIRECTORY_SEPARATOR);
 date_default_timezone_set($GLOBALS['__nova_app_config__']['timezone'] ?? "Asia/Shanghai");
 $domains = $GLOBALS['__nova_app_config__']['domain'];
 $serverName = $_SERVER["HTTP_HOST"];
-if (!in_array("0.0.0.0", $domains) &&  !in_array($serverName,$domains)) {
-    exit("[ NovaPHP ] Domain Error ：".htmlspecialchars($serverName)." not in config.domain list.");
+if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
+    exit("[ NovaPHP ] Domain Error ：" . htmlspecialchars($serverName) . " not in config.domain list.");
 }
 
-//CORS
-header("Access-Control-Allow-Origin: *");
-
 $wait = [
-    "cache".DS."iCacheDriver",
-    "cache".DS."Cache",
-    "cache".DS."FileCacheDriver",
-    "cache".DS."ApcuCacheDriver",
-    "cache".DS."CacheException",
-    "log".DS."Logger",
-    "autoload".DS."Loader"
+    "cache" . DS . "iCacheDriver",
+    "cache" . DS . "Cache",
+    "cache" . DS . "FileCacheDriver",
+    "cache" . DS . "ApcuCacheDriver",
+    "cache" . DS . "CacheException",
+    "log" . DS . "Logger",
+    "autoload" . DS . "Loader"
 ];
 
 foreach ($wait as $file) {
-    include dirname(__FILE__).DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR.$file.".php";
+    include dirname(__FILE__) . DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR . $file . ".php";
 }
 
 (new autoload\Loader())->register();
