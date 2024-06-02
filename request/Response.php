@@ -91,6 +91,9 @@ class Response
         $this->header['Content-Type'] = 'text/event-stream';
         $this->header['Cache-Control'] = 'no-cache';
         $this->header['Connection'] = 'keep-alive';
+        $this->header['X-Accel-Buffering'] = 'no';
+        ini_set('output_buffering', 'off');
+        ini_set('zlib.output_compression', false);
     }
 
     public function withFile(string $filePath,string $fileName): void
@@ -121,8 +124,9 @@ class Response
         $this->header["Server"] = "Apache";
         $this->header["X-Powered-By"] = "NovaPHP";
         $this->header["Date"] = gmdate('D, d M Y H:i:s T');
-        ob_end_clean();
-        ob_implicit_flush(1);
+
+        ob_implicit_flush();
+        ob_end_flush();
 
         switch ($this->type) {
             case ResponseType::JSON:
@@ -159,6 +163,7 @@ class Response
         }
 
 
+
         self::finish();
 
 
@@ -183,6 +188,7 @@ class Response
         set_time_limit(0);
         $callback = $this->data;
         $this->sendHeaders();
+
         while (true) {
             $result = $callback();
             if ($result === null) {
@@ -329,6 +335,7 @@ class Response
         }
         $this->sendHeaders();
         echo $send;
+
     }
    private function arrayToXml($data, &$xmlData): void
    {
