@@ -81,7 +81,6 @@ class Response
         $this->header["Expires"] = $ts;
         $this->header["Pragma"] = "cache";
         $this->header["Cache-Control"] = "max-age=$seconds_to_cache";
-        $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", time()) . " GMT";
         return $this;
     }
 
@@ -167,8 +166,6 @@ class Response
                 $this->sendHeaders();
                 break;
         }
-
-
 
         self::finish();
 
@@ -314,7 +311,6 @@ class Response
             (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= $lastModifiedTime) ||
             (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === $etag)
         ) {
-            // 文件未修改，返回 304 状态码
             $this->code = 304;
             $this->sendHeaders();
             return;
@@ -325,6 +321,9 @@ class Response
         } elseif (preg_match("/.*\.(js|css)?$/", $addr)) {
             $this->cache(60 * 24 * 180);
         }
+        // 设置 Last-Modified 和 ETag 头
+        $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";
+        $this->header["ETag"] = $etag;
 
         // 清空输出缓冲区，确保文件流输出正确
         $this->sendHeaders();
@@ -368,7 +367,6 @@ class Response
     }
     private function sendXml(): void
     {
-        $xmlStr = "";
         try {
             $xmlStr = $this->convertArrayToXml($this->data);
         }catch (\Exception $e){
