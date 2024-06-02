@@ -98,7 +98,7 @@ class Response
 
     private function filterFilePath(string $filePath):string
     {
-        return str_replace(["../","./","..\\",".\\","//","\\","\/","/\\"],'',$filePath);
+        return str_replace(["../","./","..\\",".\\"],'',$filePath);
     }
     public function withFile(string $filePath,string $fileName): void
     {
