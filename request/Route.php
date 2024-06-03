@@ -117,7 +117,18 @@ class Route
         if (sizeof($parts) > 1) {
             $uri = $parts[0];
         }
-        $uri =  str_replace(["/public/index.php", "/index.php"], "", $uri);
+
+        if(str_starts_with($uri,"/public")){
+            $uri = substr($uri,7);
+        }
+        if(str_starts_with($uri,"/index.php")){
+            $uri = substr($uri,10);
+        }
+   /*     if(str_starts_with($uri,"/public/index.php")){
+            $uri = substr($uri,17);
+        }
+
+        $uri =  str_replace(["/public/index.php", "/index.php"], "", $uri);*/
         Logger::info("Route removeQueryStringVariables: $uri");
         return $uri;
     }
