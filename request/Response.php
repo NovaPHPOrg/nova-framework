@@ -133,7 +133,9 @@ class Response
 
         try {
             ob_implicit_flush();
-            ob_end_flush();
+            if(ob_get_level() > 0){
+                ob_end_clean();
+            }
         }catch (NoticeException $exception){
 
         }
