@@ -3,6 +3,7 @@
 namespace nova\framework\request;
 
 use nova\framework\App;
+use nova\framework\exception\NoticeException;
 use nova\framework\log\Logger;
 use nova\framework\text\Json;
 use nova\framework\text\JsonEncodeException;
@@ -130,8 +131,12 @@ class Response
         $this->header["X-Powered-By"] = "NovaPHP";
         $this->header["Date"] = gmdate('D, d M Y H:i:s T');
 
-        ob_implicit_flush();
-        ob_end_flush();
+        try {
+            ob_implicit_flush();
+            ob_end_flush();
+        }catch (NoticeException $exception){
+
+        }
 
         switch ($this->type) {
             case ResponseType::JSON:
