@@ -2,6 +2,7 @@
 
 namespace nova\framework;
 
+use nova\framework\event\EventManager;
 use nova\framework\exception\AppExitException;
 use nova\framework\exception\ErrorHandler;
 use nova\framework\log\Logger;
@@ -47,7 +48,6 @@ class App
             Logger::info("App start");
             ErrorHandler::register();
             //初始化Application
-
             $applicationClazz = "app\\Application";
 
             if (class_exists($applicationClazz) && ($imp = class_implements($applicationClazz)) && in_array(iApplication::class, $imp)) {
@@ -55,11 +55,14 @@ class App
                 $this->application->onFrameworkStart();
             }
 
+            EventManager::trigger("onFrameworkStart", $this);
+
             $this->route = Route::dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
 
             if ($this->application != null) {
                 $this->application->onRoute($this->route);
             }
+            EventManager::trigger("onRoute", $this->route);
 
             $this->route->checkSelf();
 
@@ -68,6 +71,7 @@ class App
             if ($this->application != null) {
                 $this->application->onAppStart();
             }
+            EventManager::trigger("onAppStart", $this->request);
 
             $this->route->run($this->request);
 
@@ -80,12 +84,15 @@ class App
             if ($this->application != null) {
                 $this->application->onAppEnd();
             }
+            EventManager::trigger("onAppEnd", $this);
         } catch (ControllerException $exception) {
             Logger::info("Controller Exception: " . $exception->getMessage());
             $response = null;
+            $route = $exception->route();
             if ($this->application != null) {
-                $response = $this->application->onRouteNotFound($exception->route(), $_SERVER['REQUEST_URI']);
+                $response = $this->application->onRouteNotFound($route, $_SERVER['REQUEST_URI']);
             }
+            EventManager::trigger("onRouteNotFound", $route);
             if ($response == null) {
                 if ($this->debug) {
                     $response = ErrorHandler::getExceptionResponse($exception);
@@ -105,6 +112,7 @@ class App
             if ($this->application != null) {
                 $response = $this->application->onApplicationError($this->route, $_SERVER['REQUEST_URI']);
             }
+            EventManager::trigger("onApplicationError", $this->route);
             if ($response == null) {
                 if ($this->debug) {
                     $response = ErrorHandler::getExceptionResponse($exception);
@@ -123,6 +131,7 @@ class App
             if ($this->application != null) {
                 $this->application->onFrameworkEnd();
             }
+            EventManager::trigger("onFrameworkEnd", $this);
             $t = runtime("App Session");
             if ($t > 50) {
                 Logger::warning("App run too slow: $t ms, please check your code. The best runtime is 50ms");

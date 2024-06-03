@@ -11,6 +11,7 @@ class Route
      * @var array
      */
     private static array $routes = [];
+    public static string $uri = "";
 
     static function get(string $uri,RouteObject $mapper): void
     {
@@ -49,15 +50,15 @@ class Route
      */
     public static function dispatch(string $uri,string $method): RouteObject
     {
-       $uri = self::removeQueryStringVariables($uri);
+       self::$uri = self::removeQueryStringVariables($uri);
 
-       if (empty($uri)) {
-           $uri = '/';
+       if (empty( self::$uri)) {
+           self::$uri = '/';
        }
 
        $debug = $GLOBALS['__nova_app_config__']['debug']??false;
 
-        $debug && Logger::info("Route dispatch: $uri method: $method");
+        $debug && Logger::info("Route dispatch: $method ".self::$uri);
 
         $routes = self::$routes;
 
@@ -85,9 +86,9 @@ class Route
                     strtolower($key)
                 ) . '$@ui';
 
-            $debug &&  Logger::info("Route key: $key  rule: $rule  uri: $uri");
+            $debug &&  Logger::info("Route key: $key  rule: $rule  uri: ".self::$uri);
 
-            if (preg_match($rule, $uri, $matches)) {
+            if (preg_match($rule,  self::$uri, $matches)) {
                 foreach ($matches as $k => $v) {
                     if (is_string($k)) {
                         $_GET[$k] = $v;
@@ -100,21 +101,10 @@ class Route
         }
 
         if ($routeObj == null) {
-            throw new ControllerException("Route not found: $uri");
+            throw new ControllerException("Route not found: ".self::$uri);
         }
 
         return $routeObj;
-    }
-
-    /**
-     * @param string $controller
-     * @param string $method
-     */
-    private static function call(string $controller, string $method): void
-    {
-        $controller = "App\\Controllers\\$controller";
-        $controller = new $controller;
-        $controller->$method();
     }
 
     /**

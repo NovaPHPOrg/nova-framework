@@ -327,6 +327,8 @@ class Response
             $this->cache(60 * 24 * 365);
         } elseif (preg_match("/.*\.(js|css)?$/", $addr)) {
             $this->cache(60 * 24 * 180);
+        } elseif (preg_match("/.*\.(html|htm)?$/", $addr)) {
+            $this->cache(60);
         }
         // 设置 Last-Modified 和 ETag 头
         $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";

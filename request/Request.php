@@ -60,7 +60,7 @@ class Request
         return $this->action;
     }
 
-    public function getUri(): array
+    public function getUri(): string
     {
        return $_SERVER['REQUEST_URI'];
     }
