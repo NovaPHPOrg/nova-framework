@@ -127,7 +127,7 @@ EOF;
                     $args = $trace['args'] ?? [];
                     foreach ($args as $i => $arg) {
                         $TEMPLATE_CONTAINER .= <<<EOF
-<span class="highlight-args">{$arg}</span>
+<span class="highlight-args" style="margin-right: 4px">&nbsp;&nbsp;{$arg}&nbsp;,</span>
 EOF;
                     }
 

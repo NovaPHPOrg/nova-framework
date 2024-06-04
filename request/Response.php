@@ -2,6 +2,7 @@
 
 namespace nova\framework\request;
 
+use DOMDocument;
 use nova\framework\App;
 use nova\framework\exception\NoticeException;
 use nova\framework\log\Logger;
@@ -20,7 +21,7 @@ class Response
     protected ResponseType $type;
 
 
-    public function __construct(mixed $data = '', int $code = 200,ResponseType $type = ResponseType::HTML, array $header = [])
+    public function __construct(mixed $data = '', int $code = 200, ResponseType $type = ResponseType::HTML, array $header = [])
     {
         $this->data = $data;
         $this->code = $code;
@@ -30,49 +31,49 @@ class Response
 
     public static function asRedirect(string $url, int $timeout = 0): Response
     {
-        if($timeout === 0){
-            return new Response('', 302,ResponseType::REDIRECT, ['Location' => $url]);
+        if ($timeout === 0) {
+            return new Response('', 302, ResponseType::REDIRECT, ['Location' => $url]);
         }
-        return new Response('', 200,ResponseType::REDIRECT, ['refresh' => "$timeout;url=$url"]);
+        return new Response('', 200, ResponseType::REDIRECT, ['refresh' => "$timeout;url=$url"]);
     }
 
     public static function asJson(array $data, int $code = 200, array $header = []): Response
     {
-        return new Response($data, $code,ResponseType::JSON, $header);
+        return new Response($data, $code, ResponseType::JSON, $header);
     }
 
     public static function asXml(array $data, int $code = 200, array $header = []): Response
     {
-        return new Response($data, $code,ResponseType::XML, $header);
+        return new Response($data, $code, ResponseType::XML, $header);
     }
 
-    public static function asFile(string $filePath,string $fileName, array $header = []): Response
+    public static function asFile(string $filePath, string $fileName, array $header = []): Response
     {
-        $response = new Response('', 200,ResponseType::FILE, $header);
-        $response->withFile($filePath,$fileName);
+        $response = new Response('', 200, ResponseType::FILE, $header);
+        $response->withFile($filePath, $fileName);
         return $response;
     }
 
     public static function asText(string $data = '', array $header = []): Response
     {
-        return new Response($data, 200,ResponseType::TEXT, $header);
+        return new Response($data, 200, ResponseType::TEXT, $header);
     }
 
     public static function asHtml(string $data = '', array $header = []): Response
     {
-        return new Response($data, 200,ResponseType::HTML, $header);
+        return new Response($data, 200, ResponseType::HTML, $header);
     }
 
     public static function asSSE(callable $callback, array $header = []): Response
     {
-        $response = new Response($callback, 200,ResponseType::SSE, $header);
+        $response = new Response($callback, 200, ResponseType::SSE, $header);
         $response->withSSE();
         return $response;
     }
 
     public static function asStatic(string $filePath, array $header = []): Response
     {
-        return new Response($filePath, 200,ResponseType::STATIC, $header);
+        return new Response($filePath, 200, ResponseType::STATIC, $header);
     }
 
     public function cache($min): Response
@@ -96,11 +97,12 @@ class Response
         ini_set('zlib.output_compression', false);
     }
 
-    private function filterFilePath(string $filePath):string
+    private function filterFilePath(string $filePath): string
     {
-        return str_replace(["../","./","..\\",".\\"],'',$filePath);
+        return str_replace(["../", "./", "..\\", ".\\"], '', $filePath);
     }
-    public function withFile(string $filePath,string $fileName): void
+
+    public function withFile(string $filePath, string $fileName): void
     {
         $filePath = $this->filterFilePath($filePath);
         Logger::info("Response file: $filePath");
@@ -113,10 +115,22 @@ class Response
             $this->header['Content-Transfer-Encoding'] = 'binary';
             $this->header['Content-Length'] = filesize($filePath);
             $this->header['Content-Type'] = 'application/octet-stream';
-        }else{
+        } else {
             $this->data = "File not found";
             $this->header['Content-Type'] = 'text/plain';
             $this->code = 404;
+        }
+    }
+
+    private function closeOutput()
+    {
+        try {
+            ob_implicit_flush();
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+        } catch (NoticeException $exception) {
+
         }
     }
 
@@ -124,21 +138,13 @@ class Response
     {
         if (App::getInstance()->debug) {
             $this->header[] = "Server-Timing: " .
-                "Total;dur=" . round((microtime(true) -$GLOBALS['__nova_app_start__']) * 1000, 4) . ";desc=\"Total Time\"";
+                "Total;dur=" . round((microtime(true) - $GLOBALS['__nova_app_start__']) * 1000, 4) . ";desc=\"Total Time\"";
         }
 
         $this->header["Server"] = "Apache";
         $this->header["X-Powered-By"] = "NovaPHP";
         $this->header["Date"] = gmdate('D, d M Y H:i:s T');
 
-        try {
-            ob_implicit_flush();
-            if(ob_get_level() > 0){
-                ob_end_clean();
-            }
-        }catch (NoticeException $exception){
-
-        }
 
         switch ($this->type) {
             case ResponseType::JSON:
@@ -184,11 +190,18 @@ class Response
         if (!headers_sent() && !empty($this->header)) {
             http_response_code($this->code);
             foreach ($this->header as $name => $val) {
-                if (!is_string($name)) {
-                    header($val);
+                if (is_array($val)) {
+                    foreach ($val as $v) {
+                        header($name . ':' . $v);
+                    }
                 } else {
-                    header($name . ':' . $val);
+                    if (!is_string($name)) {
+                        header($val);
+                    } else {
+                        header($name . ':' . $val);
+                    }
                 }
+
             }
         }
     }
@@ -203,14 +216,14 @@ class Response
             $result = $callback();
             if ($result === null) {
                 $echo = "data: \n\n";
-            }elseif (!$result){
-               break;
-            }else{
-                if(!isset($result["event"]) || !isset($result["data"])){
+            } elseif (!$result) {
+                break;
+            } else {
+                if (!isset($result["event"]) || !isset($result["data"])) {
                     $echo = "data: \n\n";
                     Logger::warning("SSE data format error, event and data is required");
-                }else{
-                    $echo = "event: ".$result["event"] . PHP_EOL;
+                } else {
+                    $echo = "event: " . $result["event"] . PHP_EOL;
                     $echo .= "data: " . $result["data"] . PHP_EOL;
                     $echo .= PHP_EOL;
                 }
@@ -226,7 +239,7 @@ class Response
 
     protected function sendFile(): void
     {
-        if($this->code == 404){
+        if ($this->code == 404) {
             $this->sendHeaders();
             echo $this->data;
             return;
@@ -329,6 +342,7 @@ class Response
             $this->cache(60 * 24 * 180);
         } elseif (preg_match("/.*\.(html|htm)?$/", $addr)) {
             $this->cache(60);
+            $this->preLoad(file_get_contents($addr));
         }
         // 设置 Last-Modified 和 ETag 头
         $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";
@@ -351,11 +365,13 @@ class Response
             $this->code = 500;
         }
         $this->sendHeaders();
+        $this->closeOutput();
         echo $send;
 
     }
-   private function arrayToXml($data, &$xmlData): void
-   {
+
+    private function arrayToXml($data, &$xmlData): void
+    {
         foreach ($data as $key => $value) {
             if (is_numeric($key)) {
                 $key = 'item' . $key; // 数字键使用“item”前缀
@@ -369,16 +385,18 @@ class Response
         }
     }
 
-    private  function convertArrayToXml($array, $rootElement = 'root', $xmlVersion = '1.0', $xmlEncoding = 'UTF-8'):string {
+    private function convertArrayToXml($array, $rootElement = 'root', $xmlVersion = '1.0', $xmlEncoding = 'UTF-8'): string
+    {
         $xmlData = new SimpleXMLElement("<?xml version=\"$xmlVersion\" encoding=\"$xmlEncoding\"?><$rootElement></$rootElement>");
         $this->arrayToXml($array, $xmlData);
         return $xmlData->asXML();
     }
+
     private function sendXml(): void
     {
         try {
             $xmlStr = $this->convertArrayToXml($this->data);
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             $this->code = 500;
             $xml = new \SimpleXMLElement('<root/>');
             $xml->addChild("Server Error");
@@ -386,18 +404,91 @@ class Response
         }
 
         $this->sendHeaders();
+        $this->closeOutput();
         echo $xmlStr;
     }
 
     private function sendHtml(): void
     {
+        $this->preLoad($this->data);
         $this->sendHeaders();
+        $this->closeOutput();
         echo $this->data;
+    }
+
+    /**
+     * 将所有相对路径处理为绝对路径
+     * @param $path
+     * @return string
+     */
+    private function replacePath($path): string
+    {
+/*        if(str_starts_with("http",$path))return $path;
+        if(str_starts_with("//",$path)){
+            return "http:".$path;
+        }
+        $addr = App::getInstance()->getReq()->getNowAddress();
+
+        $path = $addr .DS. $path;
+        $path = Route::normalizeUriPath($path);*/
+        return $path;
+    }
+
+    private function preLoad($data): void
+    {
+        //检查里面是否存在js和css，提取所有的js和css
+        try {
+            libxml_use_internal_errors(true);
+
+            $dom = new DOMDocument();
+            $dom->loadHTML($data);
+
+            $push = " ";
+            $scripts = $dom->getElementsByTagName('script');
+            foreach ($scripts as $script) {
+                if ($script->hasAttribute('src')) {
+                    $push .= "<" . $this->replacePath($script->getAttribute('src')) . ">; rel=preload; as=script ; nopush,";
+                }
+            }
+
+            $links = $dom->getElementsByTagName('link');
+            foreach ($links as $link) {
+                if ($link->hasAttribute('href')) {
+                    $href = $link->getAttribute('href');
+                    $type = "style";
+                    if (!str_contains($href, ".css")) {
+                        $type = "font";
+                    }
+                    $push .= "<" . realpath($href) . ">; rel=preload; as=$type ; nopush,";
+                }
+            }
+            $imgs = $dom->getElementsByTagName('img');
+            foreach ($imgs as $img) {
+                if ($img->hasAttribute('src')) {
+                    $push .= "<" . $this->replacePath($img->getAttribute('src')) . ">; rel=preload; as=image ; nopush,";
+                }
+            }
+
+// 处理可能的解析错误
+            if ($errors = libxml_get_errors()) {
+                foreach ($errors as $error) {
+                    Logger::error("Preload error: " . $error->message);
+                }
+                libxml_clear_errors();
+            }
+
+            $this->header['Link'] = $push;
+
+        } catch (\Exception $e) {
+            Logger::error("Preload error: " . $e->getMessage());
+        }
+
     }
 
     private function sendText(): void
     {
         $this->sendHeaders();
+        $this->closeOutput();
         echo $this->data;
     }
 }

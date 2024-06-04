@@ -133,4 +133,45 @@ class Route
         return $uri;
     }
 
+    static function normalizeUriPath($uri) {
+        Logger::info("Route normalizeUriPath: $uri");
+        $parsedUrl = parse_url($uri);
+
+        // 获取协议、主机和路径部分
+        $scheme = isset($parsedUrl['scheme']) ? $parsedUrl['scheme'] . '://' : '';
+        $host = $parsedUrl['host'] ?? '';
+        $path = $parsedUrl['path'] ?? '';
+
+
+        // 标准化路径
+        $path = str_replace('\\', '/', $path); // 将反斜杠替换为正斜杠
+        $parts = explode('/', $path);
+        $normalizedParts = array();
+
+        foreach ($parts as $part) {
+            if ($part == '..') {
+                array_pop($normalizedParts);
+            } elseif ($part != '' && $part != '.') {
+                $normalizedParts[] = $part;
+            }
+        }
+
+        $normalizedPath = implode('/', $normalizedParts);
+
+        // 重新组合URL
+        $normalizedUrl = $scheme . $host . '/' . $normalizedPath;
+
+        if (isset($parsedUrl['query'])) {
+            $normalizedUrl .= '?' . $parsedUrl['query'];
+        }
+
+        if (isset($parsedUrl['fragment'])) {
+            $normalizedUrl .= '#' . $parsedUrl['fragment'];
+        }
+
+
+        return $normalizedUrl;
+    }
+
+
 }
