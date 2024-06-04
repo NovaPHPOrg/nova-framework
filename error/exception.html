@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Error Page</title>
+    <style>
+        :root {
+            --theme: #d9534f;
+            --theme-70: rgba(217, 83, 79, 0.7);
+            --theme-50: rgba(248, 164, 161, 0.59);
+          --line-height: 20px;
+        }
+
+        .main-container-1{
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h2{
+          color: var(--theme);
+        }
+        .error-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px!important;
+        }
+
+        .error-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .error-title {
+            color: #333;
+            margin: 0 0 8px;
+        }
+
+        .error-message {
+            color: var(--theme);
+            margin: 0;
+        }
+
+        .version-details {
+            text-align: right;
+            color: #888;
+        }
+
+        .main-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .file-list {
+            width: 200px;
+            list-style: none;
+            margin: 0;
+
+        }
+
+        .file-list li {
+            padding: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+
+        .file-list li:hover {
+            background-color: rgb(250, 242, 242);
+        }
+
+        .file-list li.active {
+            background-color: var(--theme);
+            color: #fff;
+        }
+
+        .file-list li.active .number {
+            color: #e5dddd;
+        }
+
+        .code-container {
+            flex-grow: 1;
+          overflow: hidden;
+        }
+
+        .container{
+          background-color: #fff;
+
+          border-radius: 8px;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          padding: 10px;
+          margin-bottom: var(--line-height);
+        }
+
+        .code-container pre {
+            padding: 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        #code {
+            position: relative;
+            z-index: 2;
+            overflow: auto;
+        }
+
+        #current {
+            background: var(--theme-50);
+
+            display: block;
+        }
+
+        #current .ln-num {
+            padding: 5px 0;
+            background: var(--theme-70);
+        }
+
+        #current .ln-num:before {
+            color: white;
+        }
+
+        .code {
+            font: normal 14px Arial, Helvetica, sans-serif;
+
+
+            line-height: 23px;
+
+            white-space: nowrap;
+
+        }
+
+        .number {
+            font-size: 13px;
+            color: gray;
+            margin-left: 5px;
+        }
+
+        .request-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            margin-bottom: 10px;
+
+        }
+
+        .url, .headers, .body {
+
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .headers table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .headers th, .headers td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .headers th {
+            background-color: #f1f1f1;
+        }
+
+        .headers tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .headers tr:hover {
+            background-color: #e1e1e1;
+        }
+
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .request-method {
+            color: #e4e4e4;
+            background: var(--theme-70);
+            border-radius: 10px;
+            padding: 5px
+
+        }
+
+        .request-title {
+            margin-bottom: 15px;
+        }
+
+        .ln-num::before {
+            color: #777;
+            font-style: normal;
+            font-weight: normal;
+            content: attr(data-num);
+        }
+
+        .ln-num {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            position: sticky;
+            z-index: 2;
+            left: 0;
+            width: 2.4em;
+            height: 100%;
+            text-align: center;
+            display: inline-block;
+            background: #ededed;
+        }
+        .param-group {
+          padding: 10px;
+        }
+        .param-item {
+          margin: 5px 0;
+          font-size: 14px;
+            word-wrap: break-word;
+        }
+        .highlight-function {
+          color: #0000BB;
+        }
+        .highlight-class {
+          color: var(--theme);
+        }
+        .highlight-type {
+          color: #007700;
+        }
+        .highlight-args{
+            color: #939393;
+          font-style: italic;
+          font-weight: lighter;
+        }
+        .key{
+            width: 200px
+        }
+        .value{
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+
+    </style>
+</head>
+<body>
+
+<div class="main-container-1">
+    <div class="container error-container">
+        <div class="error-details">
+            <h1 class="error-title">{ERROR_TYPE}</h1>
+            <h2 class="error-message">{ERROR_MESSAGE}</h2>
+        </div>
+        <div class="version-details">
+            <div>PHP {PHP_VERSION}</div>
+            <div>Nova {NOVA_VERSION}</div>
+        </div>
+    </div>
+    <div class="main-container">
+        <ul class="container file-list">
+            {TEMPLATE_LIST}
+        </ul>
+        <div class="code-container">
+            <div class="container arg-container" id="header">
+
+            </div>
+            <pre class="container code">
+      <code id="code">
+
+      </code>
+    </pre>
+        </div>
+    </div>
+
+    {TEMPLATE_CONTAINER}
+
+
+    <div class="request-container">
+        <div class="section">
+            <h2>Request</h2>
+            <div class="url">
+                <div class="request-title"><strong>{REQUEST_URI}</strong> <span
+                        class="request-method">{REQUEST_METHOD}</span></div>
+                <div class="code-block">{REQUEST_INFO}</div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Headers</h2>
+            <div class="headers">
+                <table>
+                    <tr>
+                        <th class="key">Key</th>
+                        <th class="value">Value</th>
+                    </tr>
+                    {REQUEST_HEADERS}
+                </table>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Body</h2>
+            <div class="body">
+                <div class="code-block">{REQUEST_BODY}</div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Routing</h2>
+            <div class="headers">
+                <table>
+                    <tr>
+                        <th class="key">Key</th>
+                        <th class="value">Value</th>
+                    </tr>
+                    {REQUEST_ROUTING}
+                </table>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Server</h2>
+            <div class="headers">
+                <table>
+                    <tr>
+                        <th class="key">Key</th>
+                        <th class="value">Value</th>
+                    </tr>
+                    {REQUEST_SERVER}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+
+    //监听窗口宽度变化
+    window.onresize = function () {
+        const codeElement = document.getElementById('code');
+        const scrollWidth = codeElement.offsetWidth;
+        const currentElement = document.getElementById('current');
+        currentElement.style.width = scrollWidth + 'px';
+    };
+
+    function showCode(fileKey) {
+        const codeElement = document.getElementById('code');
+        const headerElement = document.getElementById('header');
+        const headerTpl = document.getElementById("header" + fileKey).innerHTML;
+        const template = document.getElementById("file" + fileKey).innerHTML;
+
+        // Set active class
+        document.querySelectorAll('.file-list li').forEach(li => li.classList.remove('active'));
+        document.querySelector(`.file-list li[onclick="showCode('${fileKey}')"]`).classList.add('active');
+
+        // Update code content
+        codeElement.innerHTML = template;
+        headerElement.innerHTML = headerTpl;
+
+        setTimeout(() => {
+            const scrollWidth = codeElement.offsetWidth;
+            const currentElement = document.getElementById('current');
+            currentElement.style.width = scrollWidth + 'px';
+        });
+    }
+
+    // Initialize with the first file
+    showCode('0');
+</script>
+</body>
+</html>

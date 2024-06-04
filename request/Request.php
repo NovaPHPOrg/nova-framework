@@ -81,6 +81,15 @@ class Request
         return null;
     }
 
+
+    public function getHeaders(): array
+    {
+        if(empty($this->headers)){
+            $this->initHeaders();
+        }
+        return $this->headers;
+    }
+
     private  function initHeaders(): void
     {
 

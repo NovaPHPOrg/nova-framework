@@ -35,7 +35,7 @@ class App
         return self::$instance;
     }
 
-    private Request $request;
+    private ?Request $request =null;
 
 
     private ?iApplication $application = null;
@@ -140,7 +140,7 @@ class App
         }
     }
 
-    function getReq(): Request
+    function getReq(): ?Request
     {
         return $this->request;
     }
