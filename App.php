@@ -35,15 +35,17 @@ class App
         return self::$instance;
     }
 
-    private ?Request $request =null;
+    private Request $request;
 
 
     private ?iApplication $application = null;
 
     private ?RouteObject $route = null;
 
+
     function start(): void
     {
+        $this->request= new Request();
         try {
             Logger::info("App start");
             ErrorHandler::register();
@@ -66,7 +68,7 @@ class App
 
             $this->route->checkSelf();
 
-            $this->request = new Request($this->route->module, $this->route->controller, $this->route->action);
+            $this->request->route =  $this->route;
 
             if ($this->application != null) {
                 $this->application->onAppStart();
@@ -140,7 +142,7 @@ class App
         }
     }
 
-    function getReq(): ?Request
+    function getReq(): Request
     {
         return $this->request;
     }

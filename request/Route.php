@@ -2,6 +2,8 @@
 
 namespace nova\framework\request;
 
+use nova\framework\App;
+use nova\framework\event\EventManager;
 use nova\framework\log\Logger;
 use function nova\framework\route;
 
@@ -12,6 +14,8 @@ class Route
      */
     private static array $routes = [];
     public static string $uri = "";
+
+    public static string $root = "";
 
     static function get(string $uri,RouteObject $mapper): void
     {
@@ -56,6 +60,8 @@ class Route
            self::$uri = '/';
        }
 
+        EventManager::trigger("onBeforeRoute", self::$uri);
+
        $debug = $GLOBALS['__nova_app_config__']['debug']??false;
 
         $debug && Logger::info("Route dispatch: $method ".self::$uri);
@@ -99,7 +105,7 @@ class Route
                 break;
             }
         }
-
+        EventManager::trigger("onAfterRoute", $routeObj);
         if ($routeObj == null) {
             throw new ControllerException("Route not found: ".self::$uri);
         }
@@ -113,17 +119,21 @@ class Route
      */
     private static function removeQueryStringVariables(string $uri): string
     {
+        $raw = $uri;
         $parts = explode('?', $uri, 2);
         if (sizeof($parts) > 1) {
             $uri = $parts[0];
         }
 
+
         if(str_starts_with($uri,"/public")){
             $uri = substr($uri,7);
+            Logger::warning("Don't use /public in uri: $uri, it's unsafe. Please use nginx or apache to set root path.");
         }
         if(str_starts_with($uri,"/index.php")){
             $uri = substr($uri,10);
         }
+        self::$root = App::getInstance()->getReq()->getBasicAddress().str_replace($uri,"",$raw);
    /*     if(str_starts_with($uri,"/public/index.php")){
             $uri = substr($uri,17);
         }
@@ -133,45 +143,6 @@ class Route
         return $uri;
     }
 
-    static function normalizeUriPath($uri) {
-        Logger::info("Route normalizeUriPath: $uri");
-        $parsedUrl = parse_url($uri);
-
-        // 获取协议、主机和路径部分
-        $scheme = isset($parsedUrl['scheme']) ? $parsedUrl['scheme'] . '://' : '';
-        $host = $parsedUrl['host'] ?? '';
-        $path = $parsedUrl['path'] ?? '';
-
-
-        // 标准化路径
-        $path = str_replace('\\', '/', $path); // 将反斜杠替换为正斜杠
-        $parts = explode('/', $path);
-        $normalizedParts = array();
-
-        foreach ($parts as $part) {
-            if ($part == '..') {
-                array_pop($normalizedParts);
-            } elseif ($part != '' && $part != '.') {
-                $normalizedParts[] = $part;
-            }
-        }
-
-        $normalizedPath = implode('/', $normalizedParts);
-
-        // 重新组合URL
-        $normalizedUrl = $scheme . $host . '/' . $normalizedPath;
-
-        if (isset($parsedUrl['query'])) {
-            $normalizedUrl .= '?' . $parsedUrl['query'];
-        }
-
-        if (isset($parsedUrl['fragment'])) {
-            $normalizedUrl .= '#' . $parsedUrl['fragment'];
-        }
-
-
-        return $normalizedUrl;
-    }
 
 
 }

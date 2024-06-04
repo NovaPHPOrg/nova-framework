@@ -162,10 +162,6 @@ EOF;
 
             $request = App::getInstance()->getReq();
 
-            if ($request == null){
-                $request = new Request('','','');
-            }
-
             $requestInfo = $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI'] ."<br>";
             $headers = $request->getHeaders();
             $REQUEST_HEADERS = "";
@@ -197,15 +193,15 @@ EOF;
         $REQUEST_ROUTING = <<<EOF
 <tr>
                     <td class="key">Module</td>
-                    <td class="value">{$request->getModule()}</td>
+                    <td class="value">{$request->route->module}</td>
                 </tr>
 <tr>
                     <td class="key">Controller</td>
-                    <td class="value">{$request->getController()}</td>
+                    <td class="value">{$request->route->controller}</td>
                 </tr>
 <tr>
                     <td class="key">Action</td>
-                    <td class="value">{$request->getAction()}</td>
+                    <td class="value">{$request->route->action}</td>
                 </tr>
 EOF;
 

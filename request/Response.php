@@ -450,10 +450,7 @@ class Response
                 }
             }
 
-            if ($errors = libxml_get_errors()) {
-                foreach ($errors as $error) {
-                    Logger::error("Preload error: " . $error->message);
-                }
+            if (libxml_get_errors()) {
                 libxml_clear_errors();
             }
 
