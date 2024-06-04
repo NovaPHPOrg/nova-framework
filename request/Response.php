@@ -415,27 +415,9 @@ class Response
         echo $this->data;
     }
 
-    /**
-     * 将所有相对路径处理为绝对路径
-     * @param $path
-     * @return string
-     */
-    private function replacePath($path): string
-    {
-/*        if(str_starts_with("http",$path))return $path;
-        if(str_starts_with("//",$path)){
-            return "http:".$path;
-        }
-        $addr = App::getInstance()->getReq()->getNowAddress();
-
-        $path = $addr .DS. $path;
-        $path = Route::normalizeUriPath($path);*/
-        return $path;
-    }
 
     private function preLoad($data): void
     {
-        //检查里面是否存在js和css，提取所有的js和css
         try {
             libxml_use_internal_errors(true);
 
@@ -446,7 +428,7 @@ class Response
             $scripts = $dom->getElementsByTagName('script');
             foreach ($scripts as $script) {
                 if ($script->hasAttribute('src')) {
-                    $push .= "<" . $this->replacePath($script->getAttribute('src')) . ">; rel=preload; as=script ; nopush,";
+                    $push .= "<" . $script->getAttribute('src') . ">; rel=preload; as=script ; nopush,";
                 }
             }
 
@@ -458,17 +440,16 @@ class Response
                     if (!str_contains($href, ".css")) {
                         $type = "font";
                     }
-                    $push .= "<" . realpath($href) . ">; rel=preload; as=$type ; nopush,";
+                    $push .= "<" . $href . ">; rel=preload; as=$type ; nopush,";
                 }
             }
             $imgs = $dom->getElementsByTagName('img');
             foreach ($imgs as $img) {
                 if ($img->hasAttribute('src')) {
-                    $push .= "<" . $this->replacePath($img->getAttribute('src')) . ">; rel=preload; as=image ; nopush,";
+                    $push .= "<" . $img->getAttribute('src') . ">; rel=preload; as=image ; nopush,";
                 }
             }
 
-// 处理可能的解析错误
             if ($errors = libxml_get_errors()) {
                 foreach ($errors as $error) {
                     Logger::error("Preload error: " . $error->message);
