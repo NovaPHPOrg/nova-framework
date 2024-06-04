@@ -184,6 +184,9 @@ EOF;
             }
         $requestInfo .= "<br>";
         $raw = Argument::raw();
+        if(empty($raw)){
+            $raw = "(empty)";
+        }
         $requestInfo.= $raw;
         $tpl = str_replace("{REQUEST_INFO}", $requestInfo, $tpl);
             $tpl = str_replace("{REQUEST_URI}", $request->getNowAddress(), $tpl);
