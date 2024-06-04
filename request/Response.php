@@ -187,6 +187,7 @@ class Response
 
     protected function sendHeaders(): void
     {
+
         if (!headers_sent() && !empty($this->header)) {
             http_response_code($this->code);
             foreach ($this->header as $name => $val) {
@@ -204,6 +205,7 @@ class Response
 
             }
         }
+        $this->closeOutput();
     }
 
     protected function sendSSE(): void
@@ -365,7 +367,6 @@ class Response
             $this->code = 500;
         }
         $this->sendHeaders();
-        $this->closeOutput();
         echo $send;
 
     }
@@ -404,7 +405,6 @@ class Response
         }
 
         $this->sendHeaders();
-        $this->closeOutput();
         echo $xmlStr;
     }
 
@@ -412,7 +412,6 @@ class Response
     {
         $this->preLoad($this->data);
         $this->sendHeaders();
-        $this->closeOutput();
         echo $this->data;
     }
 
@@ -488,7 +487,6 @@ class Response
     private function sendText(): void
     {
         $this->sendHeaders();
-        $this->closeOutput();
         echo $this->data;
     }
 }
