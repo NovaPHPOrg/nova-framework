@@ -109,12 +109,15 @@ class App
             }
             $response->send();
         } catch (\Exception $exception) {
-            Logger::info("Exception: " . $exception->getMessage());
+            Logger::info("App Runtime Exception: " . $exception->getMessage());
             $response = null;
             if ($this->application != null) {
                 $response = $this->application->onApplicationError($this->route, $_SERVER['REQUEST_URI']);
             }
+
+
             EventManager::trigger("onApplicationError", $this->route);
+
             if ($response == null) {
                 if ($this->debug) {
                     $response = ErrorHandler::getExceptionResponse($exception);

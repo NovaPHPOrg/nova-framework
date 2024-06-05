@@ -12,4 +12,6 @@ enum ResponseType{
     case SSE;
 
     case REDIRECT;
+
+
 }
