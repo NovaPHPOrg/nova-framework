@@ -118,7 +118,7 @@ EOF;
 
                 $TEMPLATE_CONTAINER .= <<<EOF
 <template id="header{$key}">
-<div class="param-group" onclick="open('$file')">
+<div class="param-group" >
         <div class="param-item">
             <span class="highlight-class">$clazz</span>
             <span class="highlight-type">$type</span>
