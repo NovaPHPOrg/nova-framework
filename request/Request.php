@@ -4,20 +4,13 @@ namespace nova\framework\request;
 
 class Request
 {
-   private array $headers = [];
+    public RouteObject $route;
+    private array $headers = [];
 
-   private string $module = "";
-   private string $controller = "";
-
-   private string $action = "";
-
-    public function __construct($module,$controller,$action)
+    public function __construct()
     {
-        $this->action = $action;
-        $this->controller = $controller;
-        $this->module = $module;
+        $this->route = new RouteObject();
     }
-
 
     public function get(string $key = null, mixed $default = null): mixed
     {
@@ -44,22 +37,6 @@ class Request
         return Argument::raw();
     }
 
-    public function getModule(): string
-    {
-        return $this->module;
-    }
-
-
-    public function getController(): string
-    {
-        return $this->controller;
-    }
-
-    public function getAction(): string
-    {
-        return $this->action;
-    }
-
     public function getUri(): string
     {
        return $_SERVER['REQUEST_URI'];
@@ -79,6 +56,15 @@ class Request
             return $this->headers[$headName];
         }
         return null;
+    }
+
+
+    public function getHeaders(): array
+    {
+        if(empty($this->headers)){
+            $this->initHeaders();
+        }
+        return $this->headers;
     }
 
     private  function initHeaders(): void
@@ -168,6 +154,17 @@ class Request
     {
         return $this->getHttpScheme() . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
     }
+
+    /**
+     * 获取当前访问的地址
+     * 例如：https://example.com/index/main
+     * @return string
+     */
+    public  function getBasicAddress(): string
+    {
+        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"] ;
+    }
+
 
     /**
      * 获取当前服务器IP

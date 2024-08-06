@@ -2,6 +2,8 @@
 
 namespace nova\framework\request;
 
+use nova\framework\App;
+use nova\framework\event\EventManager;
 use nova\framework\log\Logger;
 use function nova\framework\route;
 
@@ -12,6 +14,8 @@ class Route
      */
     private static array $routes = [];
     public static string $uri = "";
+
+    public static string $root = "";
 
     static function get(string $uri,RouteObject $mapper): void
     {
@@ -56,6 +60,8 @@ class Route
            self::$uri = '/';
        }
 
+        EventManager::trigger("onBeforeRoute", self::$uri);
+
        $debug = $GLOBALS['__nova_app_config__']['debug']??false;
 
         $debug && Logger::info("Route dispatch: $method ".self::$uri);
@@ -99,7 +105,7 @@ class Route
                 break;
             }
         }
-
+        EventManager::trigger("onAfterRoute", $routeObj);
         if ($routeObj == null) {
             throw new ControllerException("Route not found: ".self::$uri);
         }
@@ -113,13 +119,30 @@ class Route
      */
     private static function removeQueryStringVariables(string $uri): string
     {
+        $raw = $uri;
         $parts = explode('?', $uri, 2);
         if (sizeof($parts) > 1) {
             $uri = $parts[0];
         }
-        $uri =  str_replace(["/public/index.php", "/index.php"], "", $uri);
+
+
+        if(str_starts_with($uri,"/public")){
+            $uri = substr($uri,7);
+            Logger::warning("Don't use /public in uri: $uri, it's unsafe. Please use nginx or apache to set root path.");
+        }
+        if(str_starts_with($uri,"/index.php")){
+            $uri = substr($uri,10);
+        }
+        self::$root = App::getInstance()->getReq()->getBasicAddress().str_replace($uri,"",$raw);
+   /*     if(str_starts_with($uri,"/public/index.php")){
+            $uri = substr($uri,17);
+        }
+
+        $uri =  str_replace(["/public/index.php", "/index.php"], "", $uri);*/
         Logger::info("Route removeQueryStringVariables: $uri");
         return $uri;
     }
+
+
 
 }
