@@ -49,4 +49,14 @@ class ApcuCacheDriver implements iCacheDriver
          apcu_clear_cache();
     }
 
+    public function deleteKeyStartWith($key)
+    {
+        $info = apcu_cache_info();
+        $cache = $info['cache_list'];
+        foreach ($cache as $item) {
+            if (str_starts_with($item['info'], $this->prefix . $key)) {
+                apcu_delete($item['info']);
+            }
+        }
+    }
 }

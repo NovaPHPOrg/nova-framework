@@ -65,4 +65,16 @@ class FileCacheDriver implements iCacheDriver
     }
 
 
+    public function deleteKeyStartWith($key): void
+    {
+        $files = scandir($this->dir);
+        foreach ($files as $file) {
+            if ($file == '.' || $file == '..') {
+                continue;
+            }
+            if (str_starts_with($file, $key)) {
+                unlink($this->dir . $file);
+            }
+        }
+    }
 }
