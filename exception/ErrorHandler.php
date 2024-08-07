@@ -5,7 +5,6 @@ namespace nova\framework\exception;
 use nova\framework\App;
 use nova\framework\log\Logger;
 use nova\framework\request\Argument;
-use nova\framework\request\Request;
 use nova\framework\request\Response;
 use nova\framework\request\ResponseType;
 use Throwable;
@@ -299,7 +298,7 @@ EOF;
         if (preg_match('/<\?(php)?[^[:graph:]]/i', $code)) {
             $return = highlight_string($code, true);
         } else {
-            $return = preg_replace('/(&lt;\?php&nbsp;)+/i', "",
+            $return = preg_replace('/(&lt;\?php)+/i', "",
                 highlight_string("<?php " . $code, true));
         }
         return str_replace(['//*/', '///**', '//*'], ['*/', '/**', '*'], $return);
