@@ -4,6 +4,8 @@ namespace nova\framework\request;
 
 
 use nova\framework\exception\AppExitException;
+use ReflectionException;
+use ReflectionMethod;
 
 class RouteObject
 {
@@ -56,12 +58,12 @@ class RouteObject
         }
         //检查函数返回类型是否为Response
         try {
-            $reflection = new \ReflectionMethod($controllerClazz, $this->action);
+            $reflection = new ReflectionMethod($controllerClazz, $this->action);
             $returnType = $reflection->getReturnType();
             if ($returnType == null || $returnType->getName() != "nova\\framework\\request\\Response") {
                 throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}",$this);
             }
-        }catch (\ReflectionException $e){
+        } catch (ReflectionException $e) {
             throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
         }
 

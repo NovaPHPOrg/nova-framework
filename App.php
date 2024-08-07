@@ -2,6 +2,7 @@
 
 namespace nova\framework;
 
+use Exception;
 use nova\framework\event\EventManager;
 use nova\framework\exception\AppExitException;
 use nova\framework\exception\ErrorHandler;
@@ -108,7 +109,7 @@ class App
                 }
             }
             $response->send();
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Logger::info("App Runtime Exception: " . $exception->getMessage());
             $response = null;
             if ($this->application != null) {

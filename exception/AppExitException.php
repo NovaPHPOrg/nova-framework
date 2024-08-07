@@ -2,9 +2,10 @@
 
 namespace nova\framework\exception;
 
+use Exception;
 use nova\framework\request\Response;
 
-class AppExitException extends \Exception
+class AppExitException extends Exception
 {
     private Response $response;
     public function __construct($response)

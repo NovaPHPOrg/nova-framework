@@ -2,10 +2,10 @@
 
 namespace nova\framework\request;
 
+use Exception;
 use nova\framework\log\Logger;
-use Throwable;
 
-class ControllerException extends \Exception
+class ControllerException extends Exception
 {
     private ?RouteObject $route;
     public function __construct(string $message = "", RouteObject $route = null)

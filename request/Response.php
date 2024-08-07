@@ -3,6 +3,7 @@
 namespace nova\framework\request;
 
 use DOMDocument;
+use Exception;
 use nova\framework\App;
 use nova\framework\exception\NoticeException;
 use nova\framework\log\Logger;
@@ -397,9 +398,9 @@ class Response
     {
         try {
             $xmlStr = $this->convertArrayToXml($this->data);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->code = 500;
-            $xml = new \SimpleXMLElement('<root/>');
+            $xml = new SimpleXMLElement('<root/>');
             $xml->addChild("Server Error");
             $xmlStr = $xml->asXML();
         }
@@ -456,7 +457,7 @@ class Response
 
             $this->header['Link'] = $push;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Logger::error("Preload error: " . $e->getMessage());
         }
 

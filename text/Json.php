@@ -2,6 +2,8 @@
 
 namespace nova\framework\text;
 
+use JsonException;
+
 class Json
 {
     /**
@@ -14,7 +16,7 @@ class Json
     {
         try {
             return json_decode(self::removeUtf8Bom($string), $isArray, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
+        } catch (JsonException $e) {
             throw new JsonDecodeException($e->getMessage(),$string,$e->getCode(),$e);
         }
     }
