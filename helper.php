@@ -2,7 +2,10 @@
 namespace nova\framework;
 
 
+use nova\framework\exception\AppExitException;
 use nova\framework\log\Logger;
+use nova\framework\log\VarDump;
+use nova\framework\request\Response;
 use nova\framework\request\RouteObject;
 
 function runtime($msg): float
@@ -75,4 +78,27 @@ function file_type(string $filename): string
         return $mime_types[$ext];
     }
     return 'application/octet-stream';
+}
+
+
+function dump(...$args)
+{
+    if (!App::getInstance()->debug) return;
+    $line = debug_backtrace()[0]['file'] . ':' . debug_backtrace()[0]['line'] . "\n";
+    $dump = new VarDump();
+
+    $tpl = "";
+    if ($line !== "") {
+        $tpl .= <<<EOF
+<style>pre {display: block;padding: 10px;margin: 0 0 10px;font-size: 13px;line-height: 1.42857143;color: #333;word-break: break-all;word-wrap: break-word;background-color:#f5f5f5;border: 1px solid #ccc;border-radius: 4px;}</style>
+<div style="text-align: left">
+<pre class="xdebug-var-dump" dir="ltr"><small>{$line}</small>\r\n
+EOF;
+    }
+    foreach ($args as $arg) {
+        $html = (new VarDump())->dumpType($arg);
+        $tpl .= "<div>{$html}</div>";
+    }
+    $tpl .= '</pre></div>';
+    throw new AppExitException(Response::asHtml($tpl));
 }
