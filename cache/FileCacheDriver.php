@@ -43,6 +43,9 @@ class FileCacheDriver implements iCacheDriver
         if (file_exists($file)) {
             $content = file_get_contents($file);
             $data = unserialize($content);
+            if (!is_array($data) || !isset($data['expire']) || !isset($data['data'])) {
+                return $default;
+            }
             if ($data['expire'] == 0 || $data['expire'] > time()) {
                 return $data['data'];
             }
