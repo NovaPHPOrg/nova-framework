@@ -44,7 +44,6 @@ class FileCacheDriver implements iCacheDriver
             $content = file_get_contents($file);
             $data = unserialize($content);
             if (!is_array($data) || !isset($data['expire']) || !isset($data['data'])) {
-                unlink($file);
                 return $default;
             }
             if ($data['expire'] == 0 || $data['expire'] > time()) {
