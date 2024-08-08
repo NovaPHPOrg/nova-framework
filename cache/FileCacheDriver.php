@@ -6,24 +6,40 @@ use nova\framework\cache\iCacheDriver;
 
 class FileCacheDriver implements iCacheDriver
 {
-
-    private string $dir = ROOT_PATH . DIRECTORY_SEPARATOR.'runtime'.DIRECTORY_SEPARATOR.'cache'.DIRECTORY_SEPARATOR;
+    private string $baseDir;
 
     public function __construct($shared = false)
     {
-        if (!is_dir($this->dir)) {
-            mkdir($this->dir, 0777, true);
+        $this->baseDir = ROOT_PATH . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR;
+        if (!is_dir($this->baseDir)) {
+            mkdir($this->baseDir, 0777, true);
         }
     }
 
     private function getKey($key): string
     {
-        return md5($key).".cache";
+        $keys = explode(DS, str_replace("/", DS, $key));
+
+        if (count($keys) < 2) {
+            $keys = ["default", $keys[0]];
+        }
+
+        $keys = array_map(function ($key) {
+            return substr(md5($key), 8, 6);
+        }, $keys);
+
+        $subDir = join(DIRECTORY_SEPARATOR, $keys);
+        return $subDir   . ".cache";
     }
 
-    public function get($key,$default = null): mixed
+    private function getFilePath($key): string
     {
-        $file = $this->dir .$this->getKey($key);
+        return $this->baseDir . $this->getKey($key);
+    }
+
+    public function get($key, $default = null): mixed
+    {
+        $file = $this->getFilePath($key);
         if (file_exists($file)) {
             $content = file_get_contents($file);
             $data = unserialize($content);
@@ -37,7 +53,11 @@ class FileCacheDriver implements iCacheDriver
 
     public function set($key, $value, $expire): void
     {
-        $file = $this->dir .$this->getKey($key);
+        $file = $this->getFilePath($key);
+        $subDir = dirname($file);
+        if (!is_dir($subDir)) {
+            mkdir($subDir, 0777, true);
+        }
         $data = [
             'expire' => $expire == 0 ? 0 : time() + $expire,
             'data' => $value
@@ -47,7 +67,7 @@ class FileCacheDriver implements iCacheDriver
 
     public function delete($key): void
     {
-        $file = $this->dir .$this->getKey($key);
+        $file = $this->getFilePath($key);
         if (file_exists($file)) {
             unlink($file);
         }
@@ -55,26 +75,27 @@ class FileCacheDriver implements iCacheDriver
 
     public function clear(): void
     {
-        $files = scandir($this->dir);
-        foreach ($files as $file) {
-            if ($file == '.' || $file == '..') {
-                continue;
-            }
-            unlink($this->dir . $file);
-        }
+        $this->deleteDirectory($this->baseDir);
     }
 
+    private function deleteDirectory($dir): void
+    {
+        if (is_dir($dir)) {
+            $files = array_diff(scandir($dir), ['.', '..']);
+            foreach ($files as $file) {
+                $filePath = $dir . DIRECTORY_SEPARATOR . $file;
+                (is_dir($filePath)) ? $this->deleteDirectory($filePath) : unlink($filePath);
+            }
+            rmdir($dir);
+        }
+    }
 
     public function deleteKeyStartWith($key): void
     {
-        $files = scandir($this->dir);
-        foreach ($files as $file) {
-            if ($file == '.' || $file == '..') {
-                continue;
-            }
-            if (str_starts_with($file, $key)) {
-                unlink($this->dir . $file);
-            }
+        $dir = $this->getKey($key);
+        if (is_dir($dir)) {
+            rmdir($dir);
         }
     }
+
 }
