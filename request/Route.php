@@ -27,6 +27,20 @@ class Route
         self::add($uri, $mapper,"POST", );
     }
 
+    static function patch(string $uri, RouteObject $mapper): void
+    {
+        self::add($uri, $mapper,"PATCH");
+    }
+
+    static function options(string $uri, RouteObject $mapper): void
+    {
+        self::add($uri, $mapper,"OPTIONS");
+    }
+
+    static function head(string $uri, RouteObject $mapper): void
+    {
+        self::add($uri, $mapper,"HEAD");
+    }
     static function put(string $uri, RouteObject $mapper): void
     {
         self::add($uri,  $mapper,"PUT",);
