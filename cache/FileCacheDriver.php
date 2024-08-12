@@ -42,7 +42,7 @@ class FileCacheDriver implements iCacheDriver
         if (file_exists($file)) {
             $fp = fopen($file, 'r');
             if ($fp && flock($fp, LOCK_SH)) { // 获取共享锁
-                $content = fread($fp, filesize($file));
+                $content = fread($fp, max(1, filesize($file)));
                 $data = unserialize($content);
                 flock($fp, LOCK_UN); // 释放锁
                 fclose($fp);
