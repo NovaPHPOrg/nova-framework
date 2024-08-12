@@ -38,9 +38,14 @@ class ArgObject
         if (is_bool($demo)) {
             $val = ($val === "1" || $val === 1 || $val === "true" || $val === "on" || $val === true);
         }
+        $this->onValidate();
         return true;
     }
 
+    public function onValidate(): void
+    {
+
+    }
 
 
     /**
