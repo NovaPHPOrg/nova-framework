@@ -18,18 +18,16 @@ class FileCacheDriver implements iCacheDriver
 
     private function getKey($key): string
     {
-        $keys = explode(DS, str_replace("/", DS, $key));
+        $keys = explode(DIRECTORY_SEPARATOR, str_replace("/", DIRECTORY_SEPARATOR, $key));
 
         if (count($keys) < 2) {
             $keys = ["default", $keys[0]];
         }
 
-        $keys = array_map(function ($key) {
-            return substr(md5($key), 8, 6);
-        }, $keys);
+        $keys = array_map(fn($key) => substr(md5($key), 8, 6), $keys);
 
         $subDir = join(DIRECTORY_SEPARATOR, $keys);
-        return $subDir   . ".cache";
+        return $subDir . ".cache";
     }
 
     private function getFilePath($key): string
@@ -40,16 +38,24 @@ class FileCacheDriver implements iCacheDriver
     public function get($key, $default = null): mixed
     {
         $file = $this->getFilePath($key);
+
         if (file_exists($file)) {
-            $content = file_get_contents($file);
-            $data = unserialize($content);
-            if (!is_array($data) || !isset($data['expire']) || !isset($data['data'])) {
-                return $default;
+            $fp = fopen($file, 'r');
+            if ($fp && flock($fp, LOCK_SH)) { // 获取共享锁
+                $content = fread($fp, filesize($file));
+                $data = unserialize($content);
+                flock($fp, LOCK_UN); // 释放锁
+                fclose($fp);
+
+                if (is_array($data) && isset($data['expire']) && isset($data['data'])) {
+                    if ($data['expire'] == 0 || $data['expire'] > time()) {
+                        return $data['data'];
+                    }
+                    unlink($file); // 文件过期时删除
+                }
+            } else {
+                fclose($fp);
             }
-            if ($data['expire'] == 0 || $data['expire'] > time()) {
-                return $data['data'];
-            }
-            unlink($file);
         }
         return $default;
     }
@@ -61,12 +67,19 @@ class FileCacheDriver implements iCacheDriver
         if (!is_dir($subDir)) {
             mkdir($subDir, 0777, true);
         }
-        $data = [
-            'expire' => $expire == 0 ? 0 : time() + $expire,
-            'data' => $value
-        ];
-        file_put_contents($file, serialize($data));
+
+        $fp = fopen($file, 'w+');
+        if ($fp && flock($fp, LOCK_EX)) { // 获取独占锁
+            $data = [
+                'expire' => $expire == 0 ? 0 : time() + $expire,
+                'data' => $value
+            ];
+            fwrite($fp, serialize($data)); // 写入数据
+            flock($fp, LOCK_UN); // 释放锁
+        }
+        fclose($fp);
     }
+
 
     public function delete($key): void
     {
@@ -95,10 +108,9 @@ class FileCacheDriver implements iCacheDriver
 
     public function deleteKeyStartWith($key): void
     {
-        $dir = $this->getKey($key);
+        $dir = $this->baseDir . $this->getKey($key);
         if (is_dir($dir)) {
-            rmdir($dir);
+            $this->deleteDirectory($dir);
         }
     }
-
 }
