@@ -2,8 +2,6 @@
 
 namespace nova\framework\cache;
 
-use cache\FileCacheDriver;
-
 class Cache {
     private iCacheDriver $driver;
     public function __construct($shared = false,$driverClazz = null){

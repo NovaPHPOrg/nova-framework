@@ -1,9 +1,7 @@
 <?php
 
-namespace cache;
+namespace nova\framework\cache;
 
-use nova\framework\cache\iCacheDriver;
-use function nova\framework\dump;
 
 class FileCacheDriver implements iCacheDriver
 {
