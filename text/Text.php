@@ -28,7 +28,10 @@ class Text
 static function parseType(mixed $sample, mixed $data): mixed
     {
         if (is_array($data)) return $data;
-        elseif (is_int($sample)) return intval($data);
+        elseif (is_int($sample)) {
+            if (is_numeric($data)) return intval($data);
+            return $sample;
+        }
         elseif (is_string($sample)) return strval($data);
         elseif (is_bool($sample)) return boolval($data);
         elseif (is_float($sample)) return floatval($data);
