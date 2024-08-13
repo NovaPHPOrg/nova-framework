@@ -14,7 +14,6 @@ class ArgObject
             foreach (get_object_vars($this) as $key => $val) {
                 if(isset($item[$key])){
                     $data = $item[$key];
-                    $data = Text::parseType($val, $data);
                     if ($this->onParseType($key, $data, $val)) {
                         if (gettype($val) === gettype($data)) {
                             $this->$key = $data;
@@ -38,6 +37,8 @@ class ArgObject
     {
         if (is_bool($demo)) {
             $val = ($val === "1" || $val === 1 || $val === "true" || $val === "on" || $val === true);
+        } else{
+            $val = Text::parseType($demo, $val);
         }
         return true;
     }
