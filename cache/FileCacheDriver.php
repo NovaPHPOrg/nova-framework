@@ -3,6 +3,7 @@
 namespace cache;
 
 use nova\framework\cache\iCacheDriver;
+use function nova\framework\dump;
 
 class FileCacheDriver implements iCacheDriver
 {
@@ -109,6 +110,7 @@ class FileCacheDriver implements iCacheDriver
     public function deleteKeyStartWith($key): void
     {
         $dir = $this->baseDir . $this->getKey($key);
+        $dir = str_replace(".cache", "", $dir);
         if (is_dir($dir)) {
             $this->deleteDirectory($dir);
         }
