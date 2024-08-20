@@ -77,6 +77,17 @@ class Response
         return new Response($filePath, 200, ResponseType::STATIC, $header);
     }
 
+
+    public static function asNone(array $header = []): Response
+    {
+        return new Response('', 200, ResponseType::NONE, $header);
+    }
+
+    public static function asRaw($data, array $header = []): Response
+    {
+        return new Response($data, 200, ResponseType::RAW, $header);
+    }
+
     public function cache($min): Response
     {
         $seconds_to_cache = $min * 60;
@@ -145,7 +156,7 @@ class Response
         $this->header["Server"] = "Apache";
         $this->header["X-Powered-By"] = "NovaPHP";
         $this->header["Date"] = gmdate('D, d M Y H:i:s T');
-
+        $this->header['Content-Type'] = 'application/octet-stream';
 
         switch ($this->type) {
             case ResponseType::JSON:
@@ -176,14 +187,23 @@ class Response
                 $this->header['Content-Type'] = 'text/plain';
                 $this->sendText();
                 break;
+            case ResponseType::NONE:
             case ResponseType::REDIRECT:
                 $this->sendHeaders();
                 break;
+            case ResponseType::RAW:
+                $this->sendRaw();
         }
 
         self::finish();
 
 
+    }
+
+    protected function sendRaw():void
+    {
+        $this->sendHeaders();
+        echo $this->data;
     }
 
     protected function sendHeaders(): void

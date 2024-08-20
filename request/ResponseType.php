@@ -14,4 +14,6 @@ enum ResponseType{
     case REDIRECT;
 
 
+    case NONE  ;
+    case RAW;
 }
