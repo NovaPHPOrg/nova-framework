@@ -151,4 +151,9 @@ class App
         return $this->request;
     }
 
+    function config():array
+    {
+        return $GLOBALS['__nova_app_config__']??[];
+    }
+
 }
