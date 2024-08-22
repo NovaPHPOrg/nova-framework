@@ -489,4 +489,9 @@ class Response
         $this->sendHeaders();
         echo $this->data;
     }
+
+    public function getData():string
+    {
+        return $this->data ?? "";
+    }
 }
