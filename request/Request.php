@@ -157,7 +157,7 @@ class Request
 
     /**
      * 获取当前访问的地址
-     * 例如：https://example.com/index/main
+     * 例如：https://example.com/
      * @return string
      */
     public  function getBasicAddress(): string
