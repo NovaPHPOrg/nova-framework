@@ -23,7 +23,7 @@ class App
 
     public function __construct()
     {
-        $this->debug = config('debug', false);
+        $this->debug = config('debug') ?? false;
     }
 
     private static ?App $instance = null;

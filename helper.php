@@ -80,10 +80,14 @@ function file_type(string $filename): string
     return 'application/octet-stream';
 }
 
-function config($key = null, $default = null): mixed
+function config($key = null, $set = null): mixed
 {
+    if ($set !== null && $key !== null) {
+        $GLOBALS['__nova_app_config__'][$key] = $set;
+        return $set;
+    }
     if ($key) {
-        return $GLOBALS['__nova_app_config__'][$key] ?? $default;
+        return $GLOBALS['__nova_app_config__'][$key] ?? null;
     }
     return $GLOBALS['__nova_app_config__'];
 }

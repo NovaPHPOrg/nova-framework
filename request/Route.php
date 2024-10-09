@@ -77,13 +77,13 @@ class Route
 
         EventManager::trigger("onBeforeRoute", self::$uri);
 
-        $debug = config('debug', false);
+        $debug = config('debug') ?? false;
 
         $debug && Logger::info("Route dispatch: $method ".self::$uri);
 
         $routes = self::$routes;
 
-        if (config('default_route', false)) {
+        if (config('default_route') ?? false) {
             $routes = array_merge($routes, [
                 "/{module}/{controller}/{action}" => route("{module}", "{controller}", "{action}"),
             ]);

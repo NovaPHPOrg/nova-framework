@@ -17,7 +17,7 @@ class Logger
     private string $temp;
     public function __construct()
     {
-        $this->debug = config('debug', false);
+        $this->debug = config('debug') ?? false;
         $this->log = $this->dir . DIRECTORY_SEPARATOR . date('Y-m-d').'.log';
         if(is_dir($this->dir) === false) {
             mkdir($this->dir, 0777, true);
