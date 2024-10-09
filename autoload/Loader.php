@@ -8,21 +8,26 @@ use nova\framework\cache\Cache;
 
 class Loader
 {
-    private array $autoloadFiles;
-    private string $cacheKey = 'autoload_files_cache';
 
-    private Cache $cache;
+    private array $autoloadFilesCache = [];
+    private string $file = '';
 
     public function __construct()
     {
-        $this->cache = new Cache(false,ApcuCacheDriver::class);
-
-        $this->autoloadFiles =  $this->cache->get($this->cacheKey,[]);
+        $this->autoloadFilesCache =  [];
+        $this->file = ROOT_PATH . DS . 'runtime' . DS . 'autoload.php';
+        if (file_exists($this->file)) {
+            try {
+                $this->autoloadFilesCache = require $this->file;
+            } catch (\Throwable $e) {
+                $this->autoloadFilesCache = [];
+            }
+        }
     }
 
     public function __destruct()
     {
-        $this->cache->set($this->cacheKey, $this->autoloadFiles);
+        file_put_contents($this->file, "<?php\nreturn " . var_export($this->autoloadFilesCache, true) . ";");
     }
 
     /**
@@ -42,8 +47,8 @@ class Loader
      */
     public function autoload(string $raw): void
     {
-        if (array_key_exists($raw, $this->autoloadFiles)) {
-            $this->load($this->autoloadFiles[$raw]);
+        if (array_key_exists($raw, $this->autoloadFilesCache)) {
+            $this->load($this->autoloadFilesCache[$raw]);
             return;
         }
 
@@ -55,7 +60,7 @@ class Loader
             $realClass = str_replace("\\", DS, str_replace($prefix, $replace, $raw)) . ".php";
             $file = ROOT_PATH . DS . $realClass;
             if (file_exists($file)) {
-                $this->autoloadFiles[$raw] = $file;
+                $this->autoloadFilesCache[$raw] = $file;
                 $this->load($file);
                 return;
             }
