@@ -5,6 +5,7 @@ namespace nova\framework\request;
 use nova\framework\App;
 use nova\framework\event\EventManager;
 use nova\framework\log\Logger;
+use function nova\framework\config;
 use function nova\framework\route;
 
 class Route
@@ -76,13 +77,13 @@ class Route
 
         EventManager::trigger("onBeforeRoute", self::$uri);
 
-       $debug = $GLOBALS['__nova_app_config__']['debug']??false;
+        $debug = config('debug', false);
 
         $debug && Logger::info("Route dispatch: $method ".self::$uri);
 
         $routes = self::$routes;
 
-        if($GLOBALS['__nova_app_config__']['default_route']??false){
+        if (config('default_route', false)) {
             $routes = array_merge($routes, [
                 "/{module}/{controller}/{action}" => route("{module}", "{controller}", "{action}"),
             ]);

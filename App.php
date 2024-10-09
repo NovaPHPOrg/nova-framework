@@ -23,7 +23,7 @@ class App
 
     public function __construct()
     {
-        $this->debug = $GLOBALS['__nova_app_config__']['debug'];
+        $this->debug = config('debug', false);
     }
 
     private static ?App $instance = null;

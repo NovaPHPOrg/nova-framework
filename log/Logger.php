@@ -2,6 +2,8 @@
 
 namespace nova\framework\log;
 
+use function nova\framework\config;
+
 class Logger
 {
     const  TYPE_ERROR = "ERROR";
@@ -15,7 +17,7 @@ class Logger
     private string $temp;
     public function __construct()
     {
-        $this->debug = $GLOBALS['__nova_app_config__']['debug']??false;
+        $this->debug = config('debug', false);
         $this->log = $this->dir . DIRECTORY_SEPARATOR . date('Y-m-d').'.log';
         if(is_dir($this->dir) === false) {
             mkdir($this->dir, 0777, true);

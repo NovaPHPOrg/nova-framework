@@ -6,8 +6,8 @@ const VERSION = "5.0.0"; //框架版本
 //根目录
 define("ROOT_PATH", dirname(__FILE__, 3));
 define("DS", DIRECTORY_SEPARATOR);
-date_default_timezone_set($GLOBALS['__nova_app_config__']['timezone'] ?? "Asia/Shanghai");
-$domains = $GLOBALS['__nova_app_config__']['domain'];
+date_default_timezone_set(config('timezone', "Asia/Shanghai"));
+$domains = config("domain", []);
 $serverName = $_SERVER["HTTP_HOST"];
 if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
     exit("[ NovaPHP ] Domain Error ：" . htmlspecialchars($serverName) . " not in config.domain list.");

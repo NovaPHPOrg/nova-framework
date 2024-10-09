@@ -2,10 +2,12 @@
 
 namespace nova\framework\cache;
 
+use function nova\framework\config;
+
 class Cache {
     private iCacheDriver $driver;
     public function __construct($shared = false,$driverClazz = null){
-        $driver = $GLOBALS['__nova_app_config__']['cache_driver']??null;
+        $driver = config('cache_driver');
         if($driverClazz != null){
             $driver = $driverClazz;
         }
