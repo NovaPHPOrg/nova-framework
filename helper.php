@@ -92,11 +92,13 @@ function config($key = null, $set = null): mixed
     return $GLOBALS['__nova_app_config__'];
 }
 
+/**
+ * @throws AppExitException
+ */
 function dump(...$args): void
 {
     if (!App::getInstance()->debug) return;
     $line = debug_backtrace()[0]['file'] . ':' . debug_backtrace()[0]['line'] . "\n";
-    $dump = new VarDump();
 
     $tpl = "";
     if ($line !== "") {

@@ -2,8 +2,7 @@
 namespace nova\framework\autoload;
 
 
-use nova\framework\cache\ApcuCacheDriver;
-use nova\framework\cache\Cache;
+use Throwable;
 
 
 class Loader
@@ -19,7 +18,7 @@ class Loader
         if (file_exists($this->file)) {
             try {
                 $this->autoloadFilesCache = require $this->file;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->autoloadFilesCache = [];
             }
         }
