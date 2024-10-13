@@ -172,7 +172,7 @@ class Request
      */
     public  function getServerIp(): string
     {
-        return gethostbyname(gethostname());
+        return gethostbyname($_SERVER["SERVER_NAME"]);
     }
 
     /**
@@ -228,6 +228,10 @@ class Request
         return $_SERVER['REQUEST_METHOD'] == 'POST';
     }
 
+    public function port(): int
+    {
+        return $_SERVER['SERVER_PORT'];
+    }
 
 
 }
