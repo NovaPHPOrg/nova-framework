@@ -55,7 +55,7 @@ class File
 
     public static function exists($path): bool
     {
-        return file_exists(self::path($path));
+        return file_exists($path);
     }
 
     // 复制文件
