@@ -2,6 +2,7 @@
 namespace nova\framework\autoload;
 
 
+use nova\framework\log\File;
 use Throwable;
 
 
@@ -14,7 +15,7 @@ class Loader
     public function __construct()
     {
         $this->autoloadFilesCache =  [];
-        $this->file = ROOT_PATH . DS . 'runtime' . DS . 'autoload.php';
+        $this->file = File::path("runtime", "autoload.php");
         if (file_exists($this->file)) {
             try {
                 $this->autoloadFilesCache = require $this->file;
@@ -57,8 +58,8 @@ class Loader
 
         foreach ($prefixes as $prefix => $replace) {
             $realClass = str_replace("\\", DS, str_replace($prefix, $replace, $raw)) . ".php";
-            $file = ROOT_PATH . DS . $realClass;
-            if (file_exists($file)) {
+            $file = File::path($realClass);
+            if (File::exists($file)) {
                 $this->autoloadFilesCache[$raw] = $file;
                 $this->load($file);
                 return;

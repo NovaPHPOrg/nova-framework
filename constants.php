@@ -14,6 +14,7 @@ if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
 }
 
 $wait = [
+    "log" . DS . "File",
     "cache" . DS . "iCacheDriver",
     "cache" . DS . "Cache",
     "cache" . DS . "FileCacheDriver",

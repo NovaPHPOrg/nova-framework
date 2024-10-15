@@ -19,9 +19,7 @@ class Logger
     {
         $this->debug = config('debug') ?? false;
         $this->log = $this->dir . DIRECTORY_SEPARATOR . date('Y-m-d').'.log';
-        if(is_dir($this->dir) === false) {
-            mkdir($this->dir, 0777, true);
-        }
+        File::mkDir($this->dir);
         $this->session_id = $GLOBALS['__nova_session_id__'];
         //获取随机文件名
         $this->temp = $this->dir . DIRECTORY_SEPARATOR . $this->session_id . '.log';
