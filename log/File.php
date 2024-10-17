@@ -94,4 +94,11 @@ class File
     {
         return pathinfo($path, PATHINFO_EXTENSION);
     }
+
+    public static function write(string $file, string $body): void
+    {
+        $dir = dirname($file);
+        self::mkDir($dir);
+        file_put_contents($file, $body);
+    }
 }
