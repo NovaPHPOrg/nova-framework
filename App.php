@@ -84,6 +84,7 @@ class App
             //获取渲染引擎
             $response = $exception->response();
             $response->send();
+            Logger::info("send response success");
             if ($this->application != null) {
                 $this->application->onAppEnd();
             }
@@ -143,6 +144,7 @@ class App
                 Logger::warning("App run too slow: $t ms, please check your code. The best runtime is 50ms");
             }
             Logger::info("App end");
+            Response::finish();
         }
     }
 

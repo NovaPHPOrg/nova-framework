@@ -5,6 +5,7 @@ namespace nova\framework\request;
 use DOMDocument;
 use Exception;
 use nova\framework\App;
+use nova\framework\event\EventManager;
 use nova\framework\exception\NoticeException;
 use nova\framework\log\Logger;
 use nova\framework\text\Json;
@@ -196,9 +197,6 @@ class Response
                 $this->sendRaw();
         }
 
-        self::finish();
-
-
     }
 
     protected function sendRaw():void
@@ -326,7 +324,7 @@ class Response
         fclose($handle);
     }
 
-    private function finish(): void
+    static function finish(): void
     {
         if (function_exists('fastcgi_finish_request')) {
             fastcgi_finish_request();
@@ -344,6 +342,7 @@ class Response
             $this->code = 404;
             $this->header["Content-Type"] = "text/plain";
             $this->sendHeaders();
+            Logger::warning("File not found: $addr");
             echo "File not found.";
             return;
         }
@@ -357,6 +356,7 @@ class Response
         ) {
             $this->code = 304;
             $this->sendHeaders();
+            Logger::info("File not modified: $addr");
             return;
         }
 
@@ -374,9 +374,11 @@ class Response
 
         // 清空输出缓冲区，确保文件流输出正确
         $this->sendHeaders();
-
+        Logger::info("Send static file: $addr");
         // 读取并输出文件内容
         readfile($addr);
+
+        EventManager::trigger("response.sendStatic", $addr);
     }
 
 

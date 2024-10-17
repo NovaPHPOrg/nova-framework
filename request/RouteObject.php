@@ -4,6 +4,7 @@ namespace nova\framework\request;
 
 
 use nova\framework\exception\AppExitException;
+use nova\framework\log\Logger;
 use ReflectionException;
 use ReflectionMethod;
 
@@ -83,6 +84,7 @@ class RouteObject
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
         $controller = new $controllerClazz($request);
         $init = $controller->init();
+        Logger::info("Route Method: $controllerClazz::{$this->action}");
         if ($init instanceof Response){
             throw new AppExitException($init);
         }
