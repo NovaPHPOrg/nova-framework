@@ -157,8 +157,7 @@ class Response
         $this->header["Server"] = "Apache";
         $this->header["X-Powered-By"] = "NovaPHP";
         $this->header["Date"] = gmdate('D, d M Y H:i:s T');
-        if (!isset($this->header['Content-Type']))
-            $this->header['Content-Type'] = 'application/octet-stream';
+
 
         switch ($this->type) {
             case ResponseType::JSON:
@@ -201,6 +200,8 @@ class Response
                 $this->sendHeaders();
                 break;
             case ResponseType::RAW:
+                if (!isset($this->header['Content-Type']))
+                    $this->header['Content-Type'] = 'application/octet-stream';
                 $this->sendRaw();
         }
 
