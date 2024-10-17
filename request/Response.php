@@ -162,30 +162,37 @@ class Response
 
         switch ($this->type) {
             case ResponseType::JSON:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'application/json';
                 $this->sendJSON();
                 break;
             case ResponseType::XML:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'application/xml';
                 $this->sendXml();
                 break;
             case ResponseType::SSE:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'text/event-stream';
                 $this->sendSSE();
                 break;
             case ResponseType::FILE:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'application/octet-stream';
                 $this->sendFile();
                 break;
             case ResponseType::STATIC:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'application/octet-stream';
                 $this->sendStatic();
                 break;
             case ResponseType::HTML:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'text/html';
                 $this->sendHtml();
                 break;
             case ResponseType::TEXT:
+                if (!isset($this->header['Content-Type']))
                 $this->header['Content-Type'] = 'text/plain';
                 $this->sendText();
                 break;
