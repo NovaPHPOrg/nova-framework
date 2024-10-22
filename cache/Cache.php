@@ -46,4 +46,9 @@ class Cache {
     {
          $this->driver->clear();
     }
+
+    public function getTtl($key): int
+    {
+        return $this->driver->getTtl($key);
+    }
 }

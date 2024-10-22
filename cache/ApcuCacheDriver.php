@@ -32,8 +32,8 @@ class ApcuCacheDriver implements iCacheDriver
 
     public function get($key, $default = null): mixed
     {
-        $result = apcu_fetch($this->prefix . $key,$success);
-        if($success === false) {
+        $result = apcu_fetch($this->prefix . $key, $success);
+        if ($success === false) {
             return $default;
         }
         return $result;
@@ -49,7 +49,7 @@ class ApcuCacheDriver implements iCacheDriver
          apcu_clear_cache();
     }
 
-    public function deleteKeyStartWith($key)
+    public function deleteKeyStartWith($key): void
     {
         $info = apcu_cache_info();
         $cache = $info['cache_list'];
@@ -58,5 +58,14 @@ class ApcuCacheDriver implements iCacheDriver
                 apcu_delete($item['info']);
             }
         }
+    }
+
+    public function getTtl($key): int
+    {
+        $info = apcu_key_info($this->prefix . $key);
+        if ($info === false) {
+            return 0;
+        }
+        return $info['ttl'] ?? 0;
     }
 }

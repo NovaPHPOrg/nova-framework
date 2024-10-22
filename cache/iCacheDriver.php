@@ -9,4 +9,6 @@ interface iCacheDriver
     public function deleteKeyStartWith($key);
     public function clear();
 
+    public function getTtl($key): int;
+
 }
