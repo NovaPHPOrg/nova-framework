@@ -2,6 +2,7 @@
 
 namespace nova\framework\log;
 
+use nova\framework\App;
 use function nova\framework\config;
 
 class Logger
@@ -68,12 +69,10 @@ class Logger
 
     public function __destruct()
     {
+
         fclose($this->handle);
-        $start = "-----------[session {$this->session_id} start]-----------\n";
-        $end = "-----------[session {$this->session_id} end]-----------\n\n";
         $handler = fopen($this->log, 'a');
         if (flock($handler, LOCK_EX)) {
-            fwrite($handler, $start);
             $tmpHandler = fopen($this->temp, 'r');
             //逐行读取写入
             while (!feof($tmpHandler)) {
@@ -81,7 +80,6 @@ class Logger
             }
             fclose($tmpHandler);
             unlink($this->temp);
-            fwrite($handler, $end);
             flock($handler, LOCK_UN);
         }
         fclose($handler);
