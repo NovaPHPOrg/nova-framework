@@ -82,6 +82,9 @@ class Logger
             unlink($this->temp);
             flock($handler, LOCK_UN);
         }
+        if (filesize($this->log) == 0) {
+            unlink($this->log);
+        }
         fclose($handler);
 
     }
