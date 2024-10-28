@@ -39,12 +39,22 @@ class FileCacheDriver implements iCacheDriver
         $file = $this->getFilePath($key);
 
         if (file_exists($file)) {
-            $expire = (int)file_get_contents($file, false, null, -10);
+            $fp = fopen($file, 'r');
+            if ($fp && flock($fp, LOCK_SH)) { // 获取共享锁
+                $content = fread($fp, max(1, filesize($file)));
+                $data = unserialize($content);
+                flock($fp, LOCK_UN); // 释放锁
+                fclose($fp);
 
-            if ($expire == 0 || $expire > time()) {
-                return unserialize(file_get_contents($file, false, null, 0, -10));
+                if (is_array($data) && isset($data['expire']) && isset($data['data'])) {
+                    if ($data['expire'] == 0 || $data['expire'] > time()) {
+                        return $data['data'];
+                    }
+                    unlink($file); // 文件过期时删除
+                }
+            } else {
+                fclose($fp);
             }
-            unlink($file); // 文件过期时删除
         }
         return $default;
     }
@@ -57,8 +67,16 @@ class FileCacheDriver implements iCacheDriver
             mkdir($subDir, 0777, true);
         }
 
-        $expire = $expire == 0 ? 0 : time() + $expire;
-        file_put_contents($file, serialize($value) . $expire);
+        $fp = fopen($file, 'w+');
+        if ($fp && flock($fp, LOCK_EX)) { // 获取独占锁
+            $data = [
+                'expire' => $expire == 0 ? 0 : time() + $expire,
+                'data' => $value
+            ];
+            fwrite($fp, serialize($data)); // 写入数据
+            flock($fp, LOCK_UN); // 释放锁
+        }
+        fclose($fp);
     }
 
 
@@ -99,16 +117,24 @@ class FileCacheDriver implements iCacheDriver
     public function getTtl($key): int
     {
         $file = $this->getFilePath($key);
-
         if (file_exists($file)) {
-            $expire = (int)file_get_contents($file, false, null, -10);
+            $fp = fopen($file, 'r');
+            if ($fp && flock($fp, LOCK_SH)) { // 获取共享锁
+                $content = fread($fp, max(1, filesize($file)));
+                $data = unserialize($content);
+                flock($fp, LOCK_UN); // 释放锁
+                fclose($fp);
 
-            if ($expire == 0) {
-                return -1; // 永不过期
+                if (is_array($data) && isset($data['expire'])) {
+                    if ($data['expire'] == 0) {
+                        return 0;
+                    }
+                    return $data['expire'] - time();
+                }
+            } else {
+                fclose($fp);
             }
-            $ttl = $expire - time();
-            return max($ttl, 0);
         }
-        return 0;
+        return -1;
     }
 }
