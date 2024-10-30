@@ -451,6 +451,7 @@ class Response
     private function preLoad($data): void
     {
         try {
+            $count = 20;
             libxml_use_internal_errors(true);
 
             $dom = new DOMDocument();
@@ -461,6 +462,7 @@ class Response
             foreach ($scripts as $script) {
                 if ($script->hasAttribute('src')) {
                     $push .= "<" . $script->getAttribute('src') . ">; rel=preload; as=script ; nopush,";
+                    $count--;
                 }
             }
 
@@ -473,12 +475,16 @@ class Response
                         $type = "font";
                     }
                     $push .= "<" . $href . ">; rel=preload; as=$type ; nopush,";
+                    $count--;
                 }
             }
             $imgs = $dom->getElementsByTagName('img');
             foreach ($imgs as $img) {
                 if ($img->hasAttribute('src')) {
                     $push .= "<" . $img->getAttribute('src') . ">; rel=preload; as=image ; nopush,";
+                    if ($count-- <= 0) {
+                        break;
+                    }
                 }
             }
 
