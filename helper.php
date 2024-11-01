@@ -113,5 +113,5 @@ EOF;
         $tpl .= "<div>{$html}</div>";
     }
     $tpl .= '</pre></div>';
-    throw new AppExitException(Response::asHtml($tpl));
+    throw new AppExitException(Response::asHtml($tpl),"Dump var");
 }

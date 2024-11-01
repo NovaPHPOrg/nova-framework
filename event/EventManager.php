@@ -3,29 +3,43 @@
 namespace nova\framework\event;
 
 use nova\framework\log\Logger;
+use function nova\framework\config;
 
 class EventManager
 {
     private static array $events = [];
 
+    public static function register(): void
+    {
+        $events = config("framework.start");
+        foreach ($events as $event) {
+            //反射调用register方法
+            try {
+                $ref = new \ReflectionClass($event);
+                $ref->getMethod('register')->invoke(null);
+            } catch (\ReflectionException $e) {
+                Logger::error("Event: $event register failed");
+            }
+        }
+    }
     /**
      * 监听事件
      * @param string $event_name 事件名
      * @param callable $func 匿名函数，接受两个参数：$func($event_name, $data)
-     * @param int $level 事件等级
+     * @param int $level 事件等级,等级越低优先级越高，默认1000，可以从0开始
      */
     public static function addListener(string $event_name, callable $func, int $level = 1000): void
     {
         if (!isset(self::$events[$event_name])) {
             self::$events[$event_name] = [];
         }
-
+        if ($level < 0) {
+            $level = 0;
+        }
         while (array_key_exists($level, self::$events[$event_name])) {
             $level++;
         }
-
         self::$events[$event_name][$level] = $func;
-
     }
 
 

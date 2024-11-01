@@ -50,14 +50,14 @@ class App
         try {
             Logger::info("App start");
             ErrorHandler::register();
+            //初始化事件管理器
+            EventManager::register();
             //初始化Application
             $applicationClazz = "app\\Application";
-
             if (class_exists($applicationClazz) && ($imp = class_implements($applicationClazz)) && in_array(iApplication::class, $imp)) {
                 $this->application = new $applicationClazz();
                 $this->application->onFrameworkStart();
             }
-
             EventManager::trigger("framework.start", $this);
 
             $this->route = Route::dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
@@ -65,7 +65,7 @@ class App
             if ($this->application != null) {
                 $this->application->onRoute($this->route);
             }
-            EventManager::trigger("route.in", $this->route);
+            EventManager::trigger("route.handler", $this->route);
 
             $this->route->checkSelf();
 
@@ -78,13 +78,12 @@ class App
 
             $this->route->run($this->request);
 
-
         } catch (AppExitException $exception) {
-            Logger::info("App Exit Exception: " . $exception->getMessage());
+            Logger::info("App Exit SException: " . $exception->getMessage());
             //获取渲染引擎
             $response = $exception->response();
             $response->send();
-            Logger::info("send response success");
+            Logger::info("end response success");
             if ($this->application != null) {
                 $this->application->onAppEnd();
             }
