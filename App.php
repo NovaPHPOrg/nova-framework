@@ -58,14 +58,14 @@ class App
                 $this->application->onFrameworkStart();
             }
 
-            EventManager::trigger("onFrameworkStart", $this);
+            EventManager::trigger("framework.start", $this);
 
             $this->route = Route::dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
 
             if ($this->application != null) {
                 $this->application->onRoute($this->route);
             }
-            EventManager::trigger("onRoute", $this->route);
+            EventManager::trigger("route.in", $this->route);
 
             $this->route->checkSelf();
 
@@ -74,7 +74,7 @@ class App
             if ($this->application != null) {
                 $this->application->onAppStart();
             }
-            EventManager::trigger("onAppStart", $this->request);
+            EventManager::trigger("app.start", $this->request);
 
             $this->route->run($this->request);
 
@@ -88,7 +88,7 @@ class App
             if ($this->application != null) {
                 $this->application->onAppEnd();
             }
-            EventManager::trigger("onAppEnd", $this);
+            EventManager::trigger("app.end", $this);
         } catch (ControllerException $exception) {
             Logger::info("Controller Exception: " . $exception->getMessage());
             $response = null;
@@ -96,7 +96,7 @@ class App
             if ($this->application != null) {
                 $response = $this->application->onRouteNotFound($route, $_SERVER['REQUEST_URI']);
             }
-            EventManager::trigger("onRouteNotFound", $route);
+            EventManager::trigger("route.not.found", $route);
             if ($response == null) {
                 if ($this->debug) {
                     $response = ErrorHandler::getExceptionResponse($exception);
@@ -118,7 +118,7 @@ class App
             }
 
 
-            EventManager::trigger("onApplicationError", $this->route);
+            EventManager::trigger("app.error", $this->route);
 
             if ($response == null) {
                 if ($this->debug) {
@@ -138,7 +138,7 @@ class App
             if ($this->application != null) {
                 $this->application->onFrameworkEnd();
             }
-            EventManager::trigger("onFrameworkEnd", $this);
+            EventManager::trigger("framework.end", $this);
             $t = runtime("App Session");
             if ($t > 50) {
                 Logger::warning("App run too slow: $t ms, please check your code. The best runtime is 50ms");

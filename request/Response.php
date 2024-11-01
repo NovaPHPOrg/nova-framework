@@ -384,9 +384,12 @@ class Response
         $this->sendHeaders();
         Logger::info("Send static file: $addr");
         // 读取并输出文件内容
-        readfile($addr);
+        $output  = EventManager::trigger("response.static.before", $addr,true);
+        if ($output !== true) {
+            readfile($addr);
+        }
 
-        EventManager::trigger("response.sendStatic", $addr);
+        EventManager::trigger("response.static.after", $addr);
     }
 
 
@@ -442,9 +445,12 @@ class Response
 
     private function sendHtml(): void
     {
-        $this->preLoad($this->data);
+        $data = $this->data;
+        $this->preLoad($data);
         $this->sendHeaders();
-        echo $this->data;
+        EventManager::trigger("response.html.before", $data);
+        echo $data;
+        EventManager::trigger("response.html.after", $data);
     }
 
 

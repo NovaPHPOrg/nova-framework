@@ -75,7 +75,7 @@ class Route
            self::$uri = '/';
        }
 
-        EventManager::trigger("onBeforeRoute", self::$uri);
+        EventManager::trigger("route.before", self::$uri);
 
         $debug = config('debug') ?? false;
 
@@ -120,7 +120,7 @@ class Route
                 break;
             }
         }
-        EventManager::trigger("onAfterRoute", $routeObj);
+        EventManager::trigger("route.after", $routeObj);
         if ($routeObj == null) {
             throw new ControllerException("Route not found: ".self::$uri);
         }
