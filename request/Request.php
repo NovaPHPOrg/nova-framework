@@ -177,7 +177,7 @@ class Request
     public  function getServerIp(): string
     {
         $ip = config('ip');
-        if ($ip!==null)return $ip;
+        if (!empty($ip))return $ip;
 
         $data = gethostbyname($_SERVER["SERVER_NAME"]);
         if ($data !== $_SERVER["SERVER_NAME"]) {
