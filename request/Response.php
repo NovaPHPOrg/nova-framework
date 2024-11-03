@@ -56,26 +56,26 @@ class Response
         return $response;
     }
 
-    public static function asText(string $data = '', array $header = []): Response
+    public static function asText(string $data = '', array $header = [],int $code = 200): Response
     {
-        return new Response($data, 200, ResponseType::TEXT, $header);
+        return new Response($data, $code, ResponseType::TEXT, $header);
     }
 
-    public static function asHtml(string $data = '', array $header = []): Response
+    public static function asHtml(string $data = '', array $header = [],int $code = 200): Response
     {
-        return new Response($data, 200, ResponseType::HTML, $header);
+        return new Response($data, $code, ResponseType::HTML, $header);
     }
 
-    public static function asSSE(callable $callback, array $header = []): Response
+    public static function asSSE(callable $callback, array $header = [],int $code = 200): Response
     {
-        $response = new Response($callback, 200, ResponseType::SSE, $header);
+        $response = new Response($callback, $code, ResponseType::SSE, $header);
         $response->withSSE();
         return $response;
     }
 
-    public static function asStatic(string $filePath, array $header = []): Response
+    public static function asStatic(string $filePath, array $header = [],int $code = 200): Response
     {
-        return new Response($filePath, 200, ResponseType::STATIC, $header);
+        return new Response($filePath, $code, ResponseType::STATIC, $header);
     }
 
 
