@@ -2,6 +2,10 @@
 
 namespace nova\framework\request;
 
+use nova\framework\cache\Cache;
+use function nova\framework\config;
+use function nova\framework\dump;
+
 class Request
 {
     public RouteObject $route;
@@ -172,7 +176,15 @@ class Request
      */
     public  function getServerIp(): string
     {
-        return gethostbyname($_SERVER["SERVER_NAME"]);
+        $ip = config('ip');
+        if ($ip!==null)return $ip;
+
+        $data = gethostbyname($_SERVER["SERVER_NAME"]);
+        if ($data !== $_SERVER["SERVER_NAME"]) {
+            config('ip',$data);
+            return $data;
+        }
+        return $data;
     }
 
     /**
