@@ -12,6 +12,9 @@ class EventManager
     public static function register(): void
     {
         $events = config("framework.start");
+        if(!is_array($events)){
+            return;
+        }
         foreach ($events as $event) {
             //反射调用register方法
             try {
