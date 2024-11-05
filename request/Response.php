@@ -210,6 +210,9 @@ class Response
     protected function sendRaw():void
     {
         $this->sendHeaders();
+        if ($this->isHead()) {
+            return;
+        }
         echo $this->data;
     }
 
@@ -241,7 +244,9 @@ class Response
         set_time_limit(0);
         $callback = $this->data;
         $this->sendHeaders();
-
+        if ($this->isHead()) {
+            return;
+        }
         while (true) {
             $result = $callback();
             if ($result === null) {
@@ -285,11 +290,17 @@ class Response
             $this->header['Content-Range'] = "bytes $start-$end/$fileSize";
             $this->header['Content-Length'] = $length;
             $this->sendHeaders();
+            if ($this->isHead()) {
+                return;
+            }
             $this->outputFile($start, $length);
         } else {
             $this->code = 200;
             $this->header['Content-Length'] = $fileSize;
             $this->sendHeaders();
+            if ($this->isHead()) {
+                return;
+            }
             readfile($this->data);
         }
     }
@@ -382,6 +393,9 @@ class Response
 
         // 清空输出缓冲区，确保文件流输出正确
         $this->sendHeaders();
+        if ($this->isHead()) {
+            return;
+        }
         Logger::info("Send static file: $addr");
         // 读取并输出文件内容
         $output  = EventManager::trigger("response.static.before", $addr,true);
@@ -401,7 +415,11 @@ class Response
             $send = json_encode(["error" => "Server error"]);
             $this->code = 500;
         }
+
         $this->sendHeaders();
+        if ($this->isHead()) {
+            return;
+        }
         echo $send;
 
     }
@@ -440,7 +458,15 @@ class Response
         }
 
         $this->sendHeaders();
+        if ($this->isHead()) {
+            return;
+        }
         echo $xmlStr;
+    }
+
+    private function isHead(): bool
+    {
+        return $_SERVER['REQUEST_METHOD'] === 'HEAD';
     }
 
     private function sendHtml(): void
@@ -448,6 +474,9 @@ class Response
         $data = $this->data;
         $this->preLoad($data);
         $this->sendHeaders();
+        if ($this->isHead()) {
+            return;
+        }
         EventManager::trigger("response.html.before", $data);
         echo $data;
         EventManager::trigger("response.html.after", $data);
@@ -456,6 +485,9 @@ class Response
 
     private function preLoad($data): void
     {
+        if ($this->isHead()) {
+            return;
+        }
         try {
             $count = 20;
             libxml_use_internal_errors(true);
@@ -509,6 +541,9 @@ class Response
     private function sendText(): void
     {
         $this->sendHeaders();
+        if ($this->isHead()) {
+            return;
+        }
         echo $this->data;
     }
 

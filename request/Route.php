@@ -21,6 +21,7 @@ class Route
     static function get(string $uri,RouteObject $mapper): void
     {
         self::add($uri, $mapper,"GET");
+        self::add($uri, $mapper,"HEAD");
     }
 
     static function post(string $uri, RouteObject $mapper): void
