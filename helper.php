@@ -97,6 +97,12 @@ function config($key = null, $set = null): mixed
  */
 function dump(...$args): void
 {
+    if(isCli()){
+        foreach ($args as $arg) {
+            echo (new VarDump())->dumpType($arg) . "\n";
+        }
+        return;
+    }
     if (!App::getInstance()->debug) return;
     $line = debug_backtrace()[0]['file'] . ':' . debug_backtrace()[0]['line'] . "\n";
 
@@ -114,4 +120,10 @@ EOF;
     }
     $tpl .= '</pre></div>';
     throw new AppExitException(Response::asHtml($tpl),"Dump var");
+}
+
+
+function isCli(): bool
+{
+    return (bool)preg_match("/cli/i", php_sapi_name());
 }

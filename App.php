@@ -43,7 +43,6 @@ class App
 
     private ?RouteObject $route = null;
 
-
     function start(): void
     {
         $this->request= new Request();
