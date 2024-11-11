@@ -2,8 +2,8 @@
 
 namespace nova\framework\log;
 
-use nova\framework\App;
 use function nova\framework\config;
+use function nova\framework\isCli;
 
 class Logger
 {
@@ -28,7 +28,7 @@ class Logger
     }
     protected function write($msg,$type = Logger::TYPE_INFO): void
     {
-        if($this->debug === false && ( $type === Logger::TYPE_INFO || $type === Logger::TYPE_WARNING)) {
+        if($this->debug === false && ( $type === Logger::TYPE_INFO || $type === Logger::TYPE_WARNING) && !isCli()) {
             return;
         }
         $m_timestamp = sprintf("%.3f", microtime(true));
@@ -40,6 +40,12 @@ class Logger
         $file = basename($trace[1]['file']);
         $msg = '[ ' . $file . ':' . $trace[1]['line'] . ' ] '.$msg ;
         $str = '[ ' . date('Y-m-d H:i:s', $timestamp) . '.' . $milliseconds . ' ] [ ' . $type . ' ] ' . $msg . "\n";
+        //判断是否是cli模式
+        if (isCli()) {
+            echo $str;
+            return;
+        }
+
         fwrite($this->handle, $str);
     }
 
