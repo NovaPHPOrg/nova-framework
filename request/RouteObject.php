@@ -7,6 +7,7 @@ use nova\framework\exception\AppExitException;
 use nova\framework\log\Logger;
 use ReflectionException;
 use ReflectionMethod;
+use function nova\framework\dump;
 
 class RouteObject
 {
@@ -45,29 +46,36 @@ class RouteObject
      */
     public function checkSelf(): void
     {
-        $controllerName = ucfirst( $this->controller);
+        $controllerName = ucfirst($this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
-        //还要检查$controllerClazz是否为Controller的子类
+        
+        // 检查控制器是否存在且继承自Controller
         if (!class_exists($controllerClazz)) {
            throw new ControllerException("Controller not found: $controllerClazz", $this);
         }
         if (!is_subclass_of($controllerClazz, Controller::class)) {
             throw new ControllerException("Controller must extends Controller: $controllerClazz", $this);
         }
-        if(!method_exists($controllerClazz, $this->action)){
-            throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
-        }
-        //检查函数返回类型是否为Response
+
         try {
             $reflection = new ReflectionMethod($controllerClazz, $this->action);
+            
+            // 检查返回类型
             $returnType = $reflection->getReturnType();
             if ($returnType == null || $returnType->getName() != "nova\\framework\\request\\Response") {
-                throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}",$this);
+                throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}", $this);
+            }
+
+            // 只检查参数数量
+            $parameters = $reflection->getParameters();
+            $paramCount = count($parameters);
+            $paramCountReceived = count($this->params);
+            if ( $paramCountReceived !== $paramCount) {
+                throw new ControllerException("Parameter count mismatch: Need $paramCount params, but got $paramCountReceived params for action: $controllerClazz::{$this->action}", $this);
             }
         } catch (ReflectionException $e) {
-            throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
+            throw new ControllerException("Action not found: $controllerClazz::{$this->action}", $this);
         }
-
     }
 
     public function __toString(): string
