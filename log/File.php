@@ -104,7 +104,7 @@ class File
 
     public static function del(string $dir): void
     {
-        if (file_exists($dir))return;
+        if (!file_exists($dir))return;
         if (is_dir($dir)) {
             $files = scandir($dir);
             foreach ($files as $file) {
