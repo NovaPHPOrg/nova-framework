@@ -101,4 +101,20 @@ class File
         self::mkDir($dir);
         file_put_contents($file, $body);
     }
+
+    public static function del(string $dir): void
+    {
+        if (file_exists($dir))return;
+        if (is_dir($dir)) {
+            $files = scandir($dir);
+            foreach ($files as $file) {
+                if ($file != '.' && $file != '..') {
+                    self::del($dir . DIRECTORY_SEPARATOR . $file);
+                }
+            }
+            rmdir($dir);
+        } else {
+            unlink($dir);
+        }
+    }
 }
