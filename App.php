@@ -47,9 +47,12 @@ class App
     function start(): void
     {
         $this->request= new Request();
+
         try {
             Logger::info("App start");
+
             ErrorHandler::register();
+
             //初始化事件管理器
             EventManager::register();
             //初始化Application
@@ -58,9 +61,11 @@ class App
                 $this->application = new $applicationClazz();
                 $this->application->onFrameworkStart();
             }
+
             EventManager::trigger("framework.start", $this);
 
             $this->route = Route::dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+
 
             if ($this->application != null) {
                 $this->application->onRoute($this->route);
@@ -109,7 +114,8 @@ class App
                 }
             }
             $response->send();
-        } catch (Exception $exception) {
+        } catch (\Throwable $exception) {
+
             Logger::info("App Runtime Exception: " . $exception->getMessage());
             $response = null;
             if ($this->application != null) {
