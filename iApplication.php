@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nova\framework;
 use nova\framework\request\Response;
 use nova\framework\request\RouteObject;

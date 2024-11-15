@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\log;
 
@@ -8,6 +9,7 @@ class File
     // 获取完整路径
     public static function valid($fileName): bool
     {
+        if ($fileName == null) return false;
         return preg_match('/^[\w_\-.]+$/', $fileName) == 1;
     }
 

@@ -1,4 +1,4 @@
-<?php
+
 declare(strict_types=1);
 namespace nova\framework;
 $GLOBALS['__nova_app_start__'] = microtime(true);
