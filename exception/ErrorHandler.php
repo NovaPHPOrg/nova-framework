@@ -9,7 +9,6 @@ use nova\framework\request\Argument;
 use nova\framework\request\Response;
 use nova\framework\request\ResponseType;
 use Throwable;
-use function nova\framework\dump;
 use const nova\framework\VERSION;
 
 class ErrorHandler
@@ -319,7 +318,6 @@ EOF;
     public
     static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): bool
     {
-        dump($err_str, $err_file, $err_line);
         $str = match ($errno){
             E_WARNING => "WARNING",
             E_NOTICE => "NOTICE",
