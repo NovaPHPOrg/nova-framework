@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace nova\framework\exception;
 
+use ErrorException;
 use nova\framework\App;
 use nova\framework\log\Logger;
 use nova\framework\request\Argument;

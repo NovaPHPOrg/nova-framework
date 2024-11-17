@@ -84,10 +84,15 @@ class App
             $this->route->run($this->request);
 
         } catch (AppExitException $exception) {
-            Logger::info("App Exit SException: " . $exception->getMessage());
+            Logger::info("App Exit Exception: " . $exception->getMessage());
             //获取渲染引擎
             $response = $exception->response();
-            $response->send();
+            try {
+                $response->send();
+            }catch (\Throwable $e){
+                Logger::error("Response send error: ".$e->getMessage());
+                var_dump($e);
+            }
             Logger::info("end response success");
             if ($this->application != null) {
                 $this->application->onAppEnd();
@@ -113,7 +118,12 @@ class App
                     );
                 }
             }
-            $response->send();
+            try {
+                $response->send();
+            }catch (\Throwable $e){
+                Logger::error("Response send error: ".$e->getMessage());
+                var_dump($e);
+            }
         } catch (\Throwable $exception) {
 
             Logger::info("App Runtime Exception: " . $exception->getMessage());
@@ -138,7 +148,12 @@ class App
 
                 }
             }
-            $response->send();
+            try {
+                $response->send();
+            }catch (\Throwable $e){
+                Logger::error("Response send error: ".$e->getMessage());
+                var_dump($e);
+            }
         } finally {
             if ($this->application != null) {
                 $this->application->onFrameworkEnd();
@@ -152,6 +167,9 @@ class App
             Response::finish();
         }
     }
+
+
+
 
     function getReq(): Request
     {
