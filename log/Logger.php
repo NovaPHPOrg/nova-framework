@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace nova\framework\log;
 
+use Exception;
+use RuntimeException;
 use function nova\framework\config;
 use function nova\framework\isCli;
 
@@ -38,7 +40,7 @@ class Logger
         if (!is_resource($this->handle)) {
             try {
                 $this->handle = fopen($this->temp, 'a');
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 if (isCli()) {
                     echo "Logger Error: Cannot open log file {$this->temp}\n";
                 }
@@ -68,10 +70,10 @@ class Logger
                 }
                 $this->handle = fopen($this->temp, 'a');
                 if (!fwrite($this->handle, $str)) {
-                    throw new \RuntimeException("Failed to write to log file: {$this->temp}");
+                    throw new RuntimeException("Failed to write to log file: {$this->temp}");
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             if (isCli()) {
                 echo "Logger Error: " . $e->getMessage() . "\n";
             }
@@ -115,12 +117,12 @@ class Logger
             }
 
             if (!is_writable(dirname($this->log))) {
-                throw new \RuntimeException("Log directory is not writable: " . dirname($this->log));
+                throw new RuntimeException("Log directory is not writable: " . dirname($this->log));
             }
 
             $handler = fopen($this->log, 'a');
             if (!$handler) {
-                throw new \RuntimeException("Cannot open log file: {$this->log}");
+                throw new RuntimeException("Cannot open log file: {$this->log}");
             }
 
             if (flock($handler, LOCK_EX)) {
@@ -145,7 +147,7 @@ class Logger
             }
             
             fclose($handler);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             if (isCli()) {
                 echo "Logger Error: " . $e->getMessage() . "\n";
             }

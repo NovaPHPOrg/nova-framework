@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace nova\framework;
 
-use Exception;
 use nova\framework\event\EventManager;
 use nova\framework\exception\AppExitException;
 use nova\framework\exception\ErrorHandler;
@@ -14,6 +13,7 @@ use nova\framework\request\Response;
 use nova\framework\request\ResponseType;
 use nova\framework\request\Route;
 use nova\framework\request\RouteObject;
+use Throwable;
 
 class App
 {
@@ -89,7 +89,7 @@ class App
             $response = $exception->response();
             try {
                 $response->send();
-            }catch (\Throwable $e){
+            } catch (Throwable $e) {
                 Logger::error("Response send error: ".$e->getMessage());
                 var_dump($e);
             }
@@ -120,11 +120,11 @@ class App
             }
             try {
                 $response->send();
-            }catch (\Throwable $e){
+            } catch (Throwable $e) {
                 Logger::error("Response send error: ".$e->getMessage());
                 var_dump($e);
             }
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
 
             Logger::info("App Runtime Exception: " . $exception->getMessage());
             $response = null;
@@ -150,7 +150,7 @@ class App
             }
             try {
                 $response->send();
-            }catch (\Throwable $e){
+            } catch (Throwable $e) {
                 Logger::error("Response send error: ".$e->getMessage());
                 var_dump($e);
             }
