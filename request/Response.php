@@ -7,7 +7,6 @@ use DOMDocument;
 use Exception;
 use nova\framework\App;
 use nova\framework\event\EventManager;
-use nova\framework\exception\NoticeException;
 use nova\framework\log\Logger;
 use nova\framework\text\Json;
 use nova\framework\text\JsonEncodeException;
@@ -138,13 +137,9 @@ class Response
 
     private function closeOutput()
     {
-        try {
-            ob_implicit_flush();
-            if (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-        } catch (NoticeException $exception) {
-
+        ob_implicit_flush();
+        if (ob_get_level() > 0) {
+            ob_end_clean();
         }
     }
 
