@@ -8,14 +8,12 @@ use nova\framework\exception\AppExitException;
 use nova\framework\log\Logger;
 use ReflectionException;
 use ReflectionMethod;
-use function nova\framework\dump;
 
 class RouteObject
 {
     public string $module;
     public string $controller;
     public string $action;
-
     public array $params;
 
     public function __construct($module = "", $controller = "", $action = "",$params = [])
@@ -69,10 +67,28 @@ class RouteObject
 
             // 只检查参数数量
             $parameters = $reflection->getParameters();
-            $paramCount = count($parameters);
+            $requiredParamCount = 0;
+
+            // 计算必需的参数数量(没有默认值的参数)
+            foreach ($parameters as $param) {
+                if (!$param->isOptional()) {
+                    $requiredParamCount++;
+                }
+            }
+            
+            
             $paramCountReceived = count($this->params);
-            if ( $paramCountReceived !== $paramCount) {
-                throw new ControllerException("Parameter count mismatch: Need $paramCount params, but got $paramCountReceived params for action: $controllerClazz::{$this->action}", $this);
+            $totalParamCount = count($parameters);
+
+            // 检查参数数量:
+            // 1. 接收的参数数量不能少于必需参数数量
+            // 2. 接收的参数数量不能超过总参数数量
+            if ($paramCountReceived < $requiredParamCount || $paramCountReceived > $totalParamCount) {
+                throw new ControllerException(
+                    "Parameter count mismatch: Need minimum $requiredParamCount params (total $totalParamCount), " .
+                    "but got $paramCountReceived params for action: $controllerClazz::{$this->action}",
+                    $this
+                );
             }
         } catch (ReflectionException $e) {
             throw new ControllerException("Action not found: $controllerClazz::{$this->action}", $this);
