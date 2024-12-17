@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework;
 include "helper.php";
@@ -29,5 +30,3 @@ foreach ($wait as $file) {
 }
 
 (new autoload\Loader())->register();
-error_reporting(E_ALL & ~(E_STRICT | E_NOTICE));
-ini_set("display_errors", "Off");

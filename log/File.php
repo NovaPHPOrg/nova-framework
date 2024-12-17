@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\log;
 
@@ -8,40 +9,55 @@ class File
     // 获取完整路径
     public static function valid($fileName): bool
     {
+        if ($fileName == null) return false;
         return preg_match('/^[\w_\-.]+$/', $fileName) == 1;
     }
-
     // 检测文件或目录是否存在
-
     public static function cpDir($src, $dest): bool
     {
-        $srcPath = self::path($src);
-        $destPath = self::path($dest);
+        // 确保使用规范化的路径
+        $srcPath = realpath($src);
+        $destPath = rtrim($dest, '/\\');
 
-        if (!self::exists($srcPath) || !is_dir($srcPath)) {
+        // 检查源目录是否存在且可读
+        if (!$srcPath || !is_dir($srcPath) || !is_readable($srcPath)) {
             return false;
         }
 
-        self::mkDir($destPath); // 确保目标目录存在
+        // 创建目标目录
+        if (!self::mkDir($destPath)) {
+            return false;
+        }
 
         $dir = opendir($srcPath);
+        if ($dir === false) {
+            return false;
+        }
+
+        $success = true;
         while (($file = readdir($dir)) !== false) {
             if ($file === '.' || $file === '..') {
                 continue;
             }
 
-            $srcFile = $srcPath . DS . $file;
-            $destFile = $destPath . DS . $file;
+            $srcFile = $srcPath . DIRECTORY_SEPARATOR . $file;
+            $destFile = $destPath . DIRECTORY_SEPARATOR . $file;
 
             if (is_dir($srcFile)) {
-                self::cpDir($srcFile, $destFile);
+                if (!self::cpDir($srcFile, $destFile)) {
+                    $success = false;
+                    break;
+                }
             } else {
-                self::cpFile($srcFile, $destFile);
+                if (!self::cpFile($srcFile, $destFile)) {
+                    $success = false;
+                    break;
+                }
             }
         }
 
         closedir($dir);
-        return true;
+        return $success;
     }
 
     // 检测是否为合规的文件名（不含路径符号）
@@ -63,7 +79,11 @@ class File
     public static function mkDir($dir): bool
     {
         if (!self::exists($dir)) {
-            return mkdir($dir, 0777, true);
+            if (mkdir($dir, 0755, true)) {  // 修改权限为 0755
+                chmod($dir, 0755);  // 确保权限设置正确
+                return true;
+            }
+            return false;
         }
         return true;
     }
@@ -72,12 +92,9 @@ class File
 
     public static function cpFile($src, $dest): bool
     {
-        $srcPath = self::path($src);
-        $destPath = self::path($dest);
-
-        if (self::exists($srcPath) && is_file($srcPath)) {
-            self::mkDir(dirname($destPath)); // 确保目标目录存在
-            return copy($srcPath, $destPath);
+        if (is_file($src) && is_readable($src)) {
+            self::mkDir(dirname($dest)); // 确保目标目录存在
+            return copy($src, $dest);
         }
         return false;
     }
@@ -100,5 +117,21 @@ class File
         $dir = dirname($file);
         self::mkDir($dir);
         file_put_contents($file, $body);
+    }
+
+    public static function del(string $dir): void
+    {
+        if (!file_exists($dir)) return;
+        if (is_dir($dir)) {
+            $files = scandir($dir);
+            foreach ($files as $file) {
+                if ($file != '.' && $file != '..') {
+                    self::del($dir . DIRECTORY_SEPARATOR . $file);
+                }
+            }
+            rmdir($dir);
+        } else {
+            unlink($dir);
+        }
     }
 }

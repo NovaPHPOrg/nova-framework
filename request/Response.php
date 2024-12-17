@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\request;
 
@@ -6,7 +7,6 @@ use DOMDocument;
 use Exception;
 use nova\framework\App;
 use nova\framework\event\EventManager;
-use nova\framework\exception\NoticeException;
 use nova\framework\log\Logger;
 use nova\framework\text\Json;
 use nova\framework\text\JsonEncodeException;
@@ -137,13 +137,9 @@ class Response
 
     private function closeOutput()
     {
-        try {
-            ob_implicit_flush();
-            if (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-        } catch (NoticeException $exception) {
-
+        ob_implicit_flush();
+        if (ob_get_level() > 0) {
+            ob_end_clean();
         }
     }
 
@@ -488,6 +484,9 @@ class Response
         if ($this->isHead()) {
             return;
         }
+        if (App::getInstance()->getReq()->isPjax()) {
+            return;
+        }
         try {
             $count = 20;
             libxml_use_internal_errors(true);
@@ -496,32 +495,49 @@ class Response
             $dom->loadHTML($data);
 
             $push = " ";
+
+            // 处理 script 标签，只加载 .js 后缀
             $scripts = $dom->getElementsByTagName('script');
             foreach ($scripts as $script) {
                 if ($script->hasAttribute('src')) {
-                    $push .= "<" . $script->getAttribute('src') . ">; rel=preload; as=script ; nopush,";
-                    $count--;
+                    $src = $script->getAttribute('src');
+                    if (str_ends_with($src, '.js')) {
+                        $push .= "<{$src}>; rel=preload; as=script; nopush,";
+                        $count--;
+                    }
                 }
             }
 
+
+            // 处理 link 标签，只加载 css 和字体
             $links = $dom->getElementsByTagName('link');
             foreach ($links as $link) {
                 if ($link->hasAttribute('href')) {
                     $href = $link->getAttribute('href');
-                    $type = "style";
-                    if (!str_contains($href, ".css")) {
-                        $type = "font";
+                    $rel = $link->getAttribute('rel');
+
+                    // 只处理 stylesheet 和 icon/font
+                    if ($rel === 'stylesheet' && str_ends_with($href, '.css')) {
+                        $push .= "<{$href}>; rel=preload; as=style; nopush,";
+                        $count--;
+                    } elseif ($rel === 'font') {
+                        $push .= "<{$href}>; rel=preload; as=font; nopush,";
+                        $count--;
                     }
-                    $push .= "<" . $href . ">; rel=preload; as=$type ; nopush,";
-                    $count--;
                 }
             }
+
+            // 处理 img 标签，排除 base64 和 ico
             $imgs = $dom->getElementsByTagName('img');
             foreach ($imgs as $img) {
                 if ($img->hasAttribute('src')) {
-                    $push .= "<" . $img->getAttribute('src') . ">; rel=preload; as=image ; nopush,";
-                    if ($count-- <= 0) {
-                        break;
+                    $src = $img->getAttribute('src');
+                    // 排除 base64 和 ico 图片
+                    if (!str_contains($src, 'data:') && !str_ends_with($src, '.ico')) {
+                        $push .= "<{$src}>; rel=preload; as=image; nopush,";
+                        if ($count-- <= 0) {
+                            break;
+                        }
                     }
                 }
             }
@@ -530,7 +546,11 @@ class Response
                 libxml_clear_errors();
             }
 
-            $this->header['Link'] = $push;
+            // 移除最后一个逗号并设置 header
+            $push = rtrim($push, ',');
+            if (!empty(trim($push))) {
+                $this->header['Link'] = $push;
+            }
 
         } catch (Exception $e) {
             Logger::error("Preload error: " . $e->getMessage());

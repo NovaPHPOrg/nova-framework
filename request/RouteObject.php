@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\request;
 
@@ -13,7 +14,6 @@ class RouteObject
     public string $module;
     public string $controller;
     public string $action;
-
     public array $params;
 
     public function __construct($module = "", $controller = "", $action = "",$params = [])
@@ -45,29 +45,54 @@ class RouteObject
      */
     public function checkSelf(): void
     {
-        $controllerName = ucfirst( $this->controller);
+        $controllerName = ucfirst($this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
-        //还要检查$controllerClazz是否为Controller的子类
+
+        // 检查控制器是否存在且继承自Controller
         if (!class_exists($controllerClazz)) {
            throw new ControllerException("Controller not found: $controllerClazz", $this);
         }
         if (!is_subclass_of($controllerClazz, Controller::class)) {
             throw new ControllerException("Controller must extends Controller: $controllerClazz", $this);
         }
-        if(!method_exists($controllerClazz, $this->action)){
-            throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
-        }
-        //检查函数返回类型是否为Response
+
         try {
             $reflection = new ReflectionMethod($controllerClazz, $this->action);
+
+            // 检查返回类型
             $returnType = $reflection->getReturnType();
             if ($returnType == null || $returnType->getName() != "nova\\framework\\request\\Response") {
-                throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}",$this);
+                throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}", $this);
+            }
+
+            // 只检查参数数量
+            $parameters = $reflection->getParameters();
+            $requiredParamCount = 0;
+
+            // 计算必需的参数数量(没有默认值的参数)
+            foreach ($parameters as $param) {
+                if (!$param->isOptional()) {
+                    $requiredParamCount++;
+                }
+            }
+
+
+            $paramCountReceived = count($this->params);
+            $totalParamCount = count($parameters);
+
+            // 检查参数数量:
+            // 1. 接收的参数数量不能少于必需参数数量
+            // 2. 接收的参数数量不能超过总参数数量
+            if ($paramCountReceived < $requiredParamCount || $paramCountReceived > $totalParamCount) {
+                throw new ControllerException(
+                    "Parameter count mismatch: Need minimum $requiredParamCount params (total $totalParamCount), " .
+                    "but got $paramCountReceived params for action: $controllerClazz::{$this->action}",
+                    $this
+                );
             }
         } catch (ReflectionException $e) {
-            throw new ControllerException("Action not found: $controllerClazz::{$this->action}",$this);
+            throw new ControllerException("Action not found: $controllerClazz::{$this->action}", $this);
         }
-
     }
 
     public function __toString(): string

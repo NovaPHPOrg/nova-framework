@@ -1,7 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\log;
 
+use Exception;
+use RuntimeException;
 use function nova\framework\config;
 use function nova\framework\isCli;
 
@@ -25,28 +28,56 @@ class Logger
         //获取随机文件名
         $this->temp = $this->dir . DIRECTORY_SEPARATOR . $this->session_id . '.log';
         $this->handle = fopen($this->temp, 'a');
+
     }
     protected function write($msg,$type = Logger::TYPE_INFO): void
     {
         if($this->debug === false && ( $type === Logger::TYPE_INFO || $type === Logger::TYPE_WARNING) && !isCli()) {
             return;
         }
-        $m_timestamp = sprintf("%.3f", microtime(true));
+
+        // 检查文件句柄是否有效
+        if (!is_resource($this->handle)) {
+            try {
+                $this->handle = fopen($this->temp, 'a');
+            } catch (Exception $e) {
+                if (isCli()) {
+                    echo "Logger Error: Cannot open log file {$this->temp}\n";
+                }
+                return;
+            }
+        }
+
+        $m_timestamp = floatval(sprintf("%.3f", microtime(true)));
         $timestamp = floor($m_timestamp);
         $milliseconds = str_pad(strval(round(($m_timestamp - $timestamp) * 1000)), 3, "0");
-        //定位到是哪一行调用输出日志
+
         $trace = debug_backtrace();
-        //只要文件名
         $file = basename($trace[1]['file']);
         $msg = '[ ' . $file . ':' . $trace[1]['line'] . ' ] '.$msg ;
-        $str = '[ ' . date('Y-m-d H:i:s', $timestamp) . '.' . $milliseconds . ' ] [ ' . $type . ' ] ' . $msg . "\n";
-        //判断是否是cli模式
+        $str = '[ ' . date('Y-m-d H:i:s', intval($timestamp)) . '.' . $milliseconds . ' ] [ ' . $type . ' ] ' . $msg . "\n";
+        
         if (isCli()) {
             echo $str;
             return;
         }
 
-        fwrite($this->handle, $str);
+        try {
+            if (fwrite($this->handle, $str) === false) {
+                // 尝试重新打开文件并再次写入
+                if (is_resource($this->handle)) {
+                    fclose($this->handle);
+                }
+                $this->handle = fopen($this->temp, 'a');
+                if (!fwrite($this->handle, $str)) {
+                    throw new RuntimeException("Failed to write to log file: {$this->temp}");
+                }
+            }
+        } catch (Exception $e) {
+            if (isCli()) {
+                echo "Logger Error: " . $e->getMessage() . "\n";
+            }
+        }
     }
 
     private static function getInstance(): Logger
@@ -75,27 +106,52 @@ class Logger
 
     public function __destruct()
     {
-
-        fclose($this->handle);
-        if (php_sapi_name() === 'cli') {
-            return;
-        }
-        $handler = fopen($this->log, 'a');
-        if (flock($handler, LOCK_EX)) {
-            $tmpHandler = fopen($this->temp, 'r');
-            //逐行读取写入
-            while (!feof($tmpHandler)) {
-                fwrite($handler, fgets($tmpHandler));
+        try {
+            if (is_resource($this->handle)) {
+                fclose($this->handle);
             }
-            fclose($tmpHandler);
-            unlink($this->temp);
-            flock($handler, LOCK_UN);
-        }
-        if (filesize($this->log) == 0) {
-            unlink($this->log);
-        }
-        fclose($handler);
 
+            // 确保日志文件目录存在且可写
+            if (!is_dir(dirname($this->log))) {
+                File::mkDir(dirname($this->log));
+            }
+
+            if (!is_writable(dirname($this->log))) {
+                throw new RuntimeException("Log directory is not writable: " . dirname($this->log));
+            }
+
+            $handler = fopen($this->log, 'a');
+            if (!$handler) {
+                throw new RuntimeException("Cannot open log file: {$this->log}");
+            }
+
+            if (flock($handler, LOCK_EX)) {
+                if (file_exists($this->temp)) {
+                    $tmpHandler = fopen($this->temp, 'r');
+                    if ($tmpHandler) {
+                        while (!feof($tmpHandler)) {
+                            $content = fgets($tmpHandler);
+                            if ($content !== false) {
+                                fwrite($handler, $content);
+                            }
+                        }
+                        fclose($tmpHandler);
+                        unlink($this->temp);
+                    }
+                }
+                flock($handler, LOCK_UN);
+            }
+
+            if (file_exists($this->log) && filesize($this->log) == 0) {
+                unlink($this->log);
+            }
+
+            fclose($handler);
+        } catch (Exception $e) {
+            if (isCli()) {
+                echo "Logger Error: " . $e->getMessage() . "\n";
+            }
+        }
     }
 
 }

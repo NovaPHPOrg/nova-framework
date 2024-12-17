@@ -1,10 +1,12 @@
 <?php
+declare(strict_types=1);
 namespace nova\framework\autoload;
 
 
 use nova\framework\log\File;
 use nova\framework\log\Logger;
 use Throwable;
+use function nova\framework\config;
 
 
 class Loader
@@ -53,11 +55,12 @@ class Loader
             return;
         }
 
-        $prefixes = [
+        $namespace = config("namespace") ?? [];
+        $namespace += [
             'nova\\' => 'nova'.DS,
         ];
 
-        foreach ($prefixes as $prefix => $replace) {
+        foreach ($namespace as $prefix => $replace) {
             $realClass = str_replace("\\", DS, str_replace($prefix, $replace, $raw)) . ".php";
             $file = File::path($realClass);
             Logger::info("AutoLoader => $file ");

@@ -1,10 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\request;
 
-use nova\framework\cache\Cache;
 use function nova\framework\config;
-use function nova\framework\dump;
 
 class Request
 {
@@ -123,7 +122,7 @@ class Request
         return (
             (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
             (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) === 'on') ||
-            (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
+            (isset($_SERVER['SERVER_PORT']) && intval($_SERVER['SERVER_PORT']) == 443) ||
             (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
         );
     }
@@ -242,7 +241,7 @@ class Request
 
     public function port(): int
     {
-        return $_SERVER['SERVER_PORT'];
+        return intval($_SERVER['SERVER_PORT']);
     }
 
 

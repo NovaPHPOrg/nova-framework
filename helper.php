@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nova\framework;
 
 
@@ -84,6 +85,7 @@ function config($key = null, $set = null): mixed
 {
     if ($set !== null && $key !== null) {
         $GLOBALS['__nova_app_config__'][$key] = $set;
+        file_put_contents(ROOT_PATH . '/config.php', "<?php\nreturn " . var_export($GLOBALS['__nova_app_config__'], true) . ";\n");
         return $set;
     }
     if ($key) {

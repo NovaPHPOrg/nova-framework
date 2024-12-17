@@ -1,8 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework\event;
 
 use nova\framework\log\Logger;
+use ReflectionClass;
+use ReflectionException;
 use function nova\framework\config;
 
 class EventManager
@@ -18,9 +21,9 @@ class EventManager
         foreach ($events as $event) {
             //反射调用register方法
             try {
-                $ref = new \ReflectionClass($event);
+                $ref = new ReflectionClass($event);
                 $ref->getMethod('register')->invoke(null);
-            } catch (\ReflectionException $e) {
+            } catch (ReflectionException $e) {
                 Logger::error("Event: $event register failed");
             }
         }

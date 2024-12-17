@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 
 namespace nova\framework;
 
-use Exception;
 use nova\framework\event\EventManager;
 use nova\framework\exception\AppExitException;
 use nova\framework\exception\ErrorHandler;
@@ -13,6 +13,7 @@ use nova\framework\request\Response;
 use nova\framework\request\ResponseType;
 use nova\framework\request\Route;
 use nova\framework\request\RouteObject;
+use Throwable;
 
 class App
 {
@@ -46,9 +47,12 @@ class App
     function start(): void
     {
         $this->request= new Request();
+
         try {
             Logger::info("App start");
+
             ErrorHandler::register();
+
             //初始化事件管理器
             EventManager::register();
             //初始化Application
@@ -57,9 +61,11 @@ class App
                 $this->application = new $applicationClazz();
                 $this->application->onFrameworkStart();
             }
+
             EventManager::trigger("framework.start", $this);
 
             $this->route = Route::dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+
 
             if ($this->application != null) {
                 $this->application->onRoute($this->route);
@@ -78,10 +84,15 @@ class App
             $this->route->run($this->request);
 
         } catch (AppExitException $exception) {
-            Logger::info("App Exit SException: " . $exception->getMessage());
+            Logger::info("App Exit Exception: " . $exception->getMessage());
             //获取渲染引擎
             $response = $exception->response();
-            $response->send();
+            try {
+                $response->send();
+            } catch (Throwable $e) {
+                Logger::error("Response send error: " . $e->getMessage());
+                var_dump($e);
+            }
             Logger::info("end response success");
             if ($this->application != null) {
                 $this->application->onAppEnd();
@@ -107,8 +118,14 @@ class App
                     );
                 }
             }
-            $response->send();
-        } catch (Exception $exception) {
+            try {
+                $response->send();
+            } catch (Throwable $e) {
+                Logger::error("Response send error: " . $e->getMessage());
+                var_dump($e);
+            }
+        } catch (Throwable $exception) {
+
             Logger::info("App Runtime Exception: " . $exception->getMessage());
             $response = null;
             if ($this->application != null) {
@@ -131,7 +148,12 @@ class App
 
                 }
             }
-            $response->send();
+            try {
+                $response->send();
+            } catch (Throwable $e) {
+                Logger::error("Response send error: " . $e->getMessage());
+                var_dump($e);
+            }
         } finally {
             if ($this->application != null) {
                 $this->application->onFrameworkEnd();
@@ -145,6 +167,7 @@ class App
             Response::finish();
         }
     }
+
 
     function getReq(): Request
     {
