@@ -77,6 +77,9 @@ class Logger
     {
 
         fclose($this->handle);
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
         $handler = fopen($this->log, 'a');
         if (flock($handler, LOCK_EX)) {
             $tmpHandler = fopen($this->temp, 'r');
