@@ -4,52 +4,95 @@ declare(strict_types=1);
 namespace nova\framework\exception;
 
 use ErrorException;
-use nova\framework\App;
-use nova\framework\log\Logger;
-use nova\framework\request\Argument;
-use nova\framework\request\Response;
-use nova\framework\request\ResponseType;
+use nova\framework\core\Context;
+use nova\framework\core\Logger;
+use nova\framework\http\Arguments;
+use nova\framework\http\Response;
+use nova\framework\route\RouteObject;
 use Throwable;
-use const nova\framework\VERSION;
 
+/**
+ * 错误处理器类
+ * 
+ * 负责处理框架运行时的错误和异常：
+ * - 注册全局错误和异常处理器
+ * - 将 PHP 错误转换为异常
+ * - 生成友好的错误页面
+ * - 记录错误日志
+ * - 支持开发和生产环境不同的错误处理策略
+ */
 class ErrorHandler
 {
+    /**
+     * 注册错误处理器
+     * 
+     * 将该类注册为全局的错误和异常处理器
+     */
     public static function register(): void
     {
-        $old_error_handler = set_error_handler([__CLASS__, 'appError'], E_ALL);
+        set_error_handler([__CLASS__, 'appError'], E_ALL);
         set_exception_handler([__CLASS__, 'appException']);
     }
 
-
     /**
-     *
-     * App异常退出
-     * @param $e Throwable
-     * @throws AppExitException
+     * 处理应用异常
+     * 
+     * 根据环境配置决定是否显示详细错误信息：
+     * - 开发环境：显示详细的错误信息和调用栈
+     * - 生产环境：显示友好的错误页面
+     * 
+     * @param Throwable $e 捕获的异常
+     * @throws AppExitException 当需要中断应用执行时
      */
     public static function appException(Throwable $e): void
     {
-
+        Logger::error($e->getMessage());
+        $context = Context::instance();
+        
+        // Exit异常直接返回，不进行处理
         if ($e instanceof AppExitException) {
-            return;//Exit异常不进行处理
+            return;
         }
 
-        if (!App::getInstance()->debug) return;
-        $hasCatchError = $GLOBALS['__nova_frame_error__'] ?? false;
-        if ($hasCatchError) return;
-        $GLOBALS['__nova_frame_error__'] = true;
+        // 非调试模式或已经处理过错误时直接返回
+        if (!$context->isDebug()) return;
+        if ($context->get("hasCatchError", false)) return;
+        
+        // 标记已处理错误，避免递归
+        $context->set("hasCatchError", true);
+        
+        // 抛出带有错误响应的异常
         throw new AppExitException(self::getExceptionResponse($e));
     }
 
-    static function getExceptionResponse(Throwable $e): Response
+    /**
+     * 生成异常响应
+     * 
+     * @param Throwable $e 需要处理的异常
+     * @return Response 包含错误信息的响应对象
+     */
+    public static function getExceptionResponse(Throwable $e): Response
     {
         $html = self::customExceptionHandler($e);
-        return new Response($html, 500, ResponseType::HTML);
+        return Response::asHtml($html);
     }
 
-
-    static function customExceptionHandler(Throwable $exception): string
+    /**
+     * 自定义异常处理器
+     * 
+     * 生成包含详细错误信息的HTML页面，包括：
+     * - 错误类型和消息
+     * - 文件位置和行号
+     * - 调用栈信息
+     * - 请求信息
+     * - 服务器环境信息
+     * 
+     * @param Throwable $exception 需要处理的异常
+     * @return string 格式化的HTML错误页面
+     */
+    private static function customExceptionHandler(Throwable $exception): string
     {
+        // 准备调用栈信息
         $trace = $exception->getTrace();
         array_unshift($trace, [
             'file' => $exception->getFile(),
@@ -61,201 +104,220 @@ class ErrorHandler
         ]);
 
 
+        // 记录错误日志
         error_clear_last();
-        //避免递归调用
         Logger::error($exception->getMessage());
+        
+        // 格式化调用栈
         $traces = sizeof($trace) === 0 ? debug_backtrace() : $trace;
         $trace_text = [];
-        foreach ($traces as $i => &$call) {
-            $trace_text[$i] = sprintf("#%s %s(%s): %s%s%s", $i, $call['file'] ?? "", $call['line'] ?? "", $call["class"] ?? "", $call["type"] ?? "", $call['function'] ?? "");
+        foreach ($traces as $i => $call) {
+            $trace_text[$i] = sprintf(
+                "#%s %s(%s): %s%s%s", 
+                $i, 
+                $call['file'] ?? "", 
+                $call['line'] ?? "", 
+                $call["class"] ?? "", 
+                $call["type"] ?? "", 
+                $call['function'] ?? ""
+            );
             Logger::error($trace_text[$i]);
         }
 
+        // 加载错误模板
         $tpl = file_get_contents(ROOT_PATH . "/nova/framework/error/exception.html");
-         $classFullName = get_class($exception);
-    $classParts = explode('\\', $classFullName);
-    $className = end($classParts);
+        if ($tpl === false) {
+            return "Error template not found";
+        }
 
-    $tpl = str_replace("{PHP_VERSION}", PHP_VERSION, $tpl);
-    $tpl = str_replace("{NOVA_VERSION}", VERSION, $tpl);
-    $tpl = str_replace("{ERROR_TYPE}", $className, $tpl);
-    $tpl = str_replace("{ERROR_MESSAGE}", $exception->getMessage(), $tpl);
-    $first = true;
+        // 获取异常类名
+        $classFullName = get_class($exception);
+        $classParts = explode('\\', $classFullName);
+        $className = end($classParts);
 
-    $TEMPLATE_LIST = "";
-    $TEMPLATE_CONTAINER = "";
+        // 替换基本错误信息
+        $tpl = str_replace([
+            "{PHP_VERSION}",
+            "{NOVA_VERSION}",
+            "{ERROR_TYPE}",
+            "{ERROR_MESSAGE}"
+        ], [
+            PHP_VERSION,
+            Context::VERSION,
+            $className,
+            $exception->getMessage()
+        ], $tpl);
 
+        // 生成错误文件列表和代码容器
+        $TEMPLATE_LIST = "";
+        $TEMPLATE_CONTAINER = "";
+        $first = true;
 
-    foreach ($traces as $key => $trace) {
+        foreach ($traces as $key => $trace) {
+            if (!is_array($trace) || empty($trace["file"])) {
+                continue;
+            }
 
-        if (is_array($trace) && !empty($trace["file"])) {
             $trace["keyword"] = $trace["keyword"] ?? "";
             $sourceLine = self::errorFile($trace["file"], $trace["line"], $trace["keyword"]);
             $trace["line"] = $sourceLine["line"];
             unset($sourceLine["line"]);
-            if ($sourceLine) {
 
-                if ($first) {
-                    $first = false;
-                    $TEMPLATE_LIST .= <<<EOF
-<li class="active" onclick="showCode('{$key}')"><b>{$trace['file']}</b><span class="number">#{$trace['line']}</span></li>
-EOF;
-                } else {
-                    $TEMPLATE_LIST .= <<<EOF
-<li onclick="showCode('{$key}')"><b>{$trace['file']}</b><span class="number">#{$trace['line']}</span></li>
-EOF;
-                }
-
-
-
-                $file = $trace['file'];
-
-                $clazz = $trace["class"] ?? "";
-
-                $type = $trace["type"] ?? "";
-
-                $function = $trace['function'] ?? "";
-
-
-                $TEMPLATE_CONTAINER .= <<<EOF
-<template id="header{$key}">
-<div class="param-group" >
-        <div class="param-item">
-            <span class="highlight-class">$clazz</span>
-            <span class="highlight-type">$type</span>
-EOF;
-                if (!empty($function)) {
-                    $TEMPLATE_CONTAINER .= <<<EOF
-            <span class="highlight-function">{$function}(
-EOF;
-                    $args = $trace['args'] ?? [];
-                    foreach ($args as $i => $arg) {
-
-                        //判断i是奇数还是偶数
-                        $color = "highlight-args1";
-                        if ($i % 2 != 0) {
-                            $color = "highlight-args2";
-                        }
-
-                        $argStr = str_replace("\n","<br>",print_r($arg, true));
-
-                        $TEMPLATE_CONTAINER .= <<<EOF
-            <span class="highlight-args $color" style="margin-right: 4px">&nbsp;&nbsp;{$argStr}&nbsp;,</span>
-EOF;
-                    }
-
-                    $TEMPLATE_CONTAINER .= <<<EOF
-            )</span>
-EOF;
-                }
-                $TEMPLATE_CONTAINER .= <<<EOF
-        </div>
-    </div>
-</template>
-<template id="file{$key}">
-
-EOF;
-
-                foreach ($sourceLine as $line) {
-                    $TEMPLATE_CONTAINER .= <<<EOF
-$line
-EOF;
-                }
-                $TEMPLATE_CONTAINER .= <<<EOF
-</template>
-EOF;
-
+            if (!$sourceLine) {
+                continue;
             }
+
+            // 生成文件列表项
+            $TEMPLATE_LIST .= $first 
+                ? "<li class=\"active\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>"
+                : "<li onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>";
+            $first = false;
+
+            // 生成代码容器
+            $TEMPLATE_CONTAINER .= self::generateCodeContainer($key, $trace, $sourceLine);
         }
-    }
 
-    $tpl = str_replace("{TEMPLATE_LIST}", $TEMPLATE_LIST, $tpl);
+        // 替换模板变量
+        $tpl = str_replace("{TEMPLATE_LIST}", $TEMPLATE_LIST, $tpl);
+        $tpl = str_replace("{TEMPLATE_CONTAINER}", $TEMPLATE_CONTAINER, $tpl);
 
-    $tpl = str_replace("{TEMPLATE_CONTAINER}", $TEMPLATE_CONTAINER, $tpl);
 
-
-    $request = App::getInstance()->getReq();
-
-    $requestInfo = $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI'] . "<br>";
-    $headers = $request->getHeaders();
-    $REQUEST_HEADERS = "";
-    foreach ($headers as $key => $value) {
-        if (empty($value)) {
-            continue;
-        }
-        $requestInfo .= "$key: $value<br>";
-        $REQUEST_HEADERS .= <<<EOF
-<tr>
-                <td class="key">$key</td>
-                <td class="value">$value</td>
-            </tr>
-EOF;
-
-    }
-    $requestInfo .= "<br>";
-    $raw = Argument::raw();
-    if (empty($raw)) {
-        $raw = "(empty)";
-    }
-    $requestInfo .= $raw;
-    $tpl = str_replace("{REQUEST_INFO}", $requestInfo, $tpl);
-    $tpl = str_replace("{REQUEST_URI}", $request->getNowAddress(), $tpl);
-    $tpl = str_replace("{REQUEST_METHOD}", $_SERVER['REQUEST_METHOD'], $tpl);
-    $tpl = str_replace("{REQUEST_HEADERS}", $REQUEST_HEADERS, $tpl);
-    $tpl = str_replace("{REQUEST_BODY}", $raw, $tpl);
-
-    $REQUEST_ROUTING = <<<EOF
-<tr>
-                <td class="key">Module</td>
-                <td class="value">{$request->route->module}</td>
-            </tr>
-<tr>
-                <td class="key">Controller</td>
-                <td class="value">{$request->route->controller}</td>
-            </tr>
-<tr>
-                <td class="key">Action</td>
-                <td class="value">{$request->route->action}</td>
-            </tr>
-EOF;
-
-    $tpl = str_replace("{REQUEST_ROUTING}", $REQUEST_ROUTING, $tpl);
-
-    $REQUEST_SERVER = "";
-    foreach ($_SERVER as $key => $value) {
-        $REQUEST_SERVER .= <<<EOF
-<tr>
-                <td class="key">$key</td>
-                <td class="value">$value</td>
-            </tr>
-EOF;
-
-    }
-    $tpl = str_replace("{REQUEST_SERVER}", $REQUEST_SERVER, $tpl);
-
+        // 添加请求信息
+        $tpl = self::addRequestInfo($tpl);
 
         return $tpl;
     }
 
+    /**
+     * 生成代码容器HTML
+     * 
+     * @param int $key 追踪索引
+     * @param array $trace 追踪信息
+     * @param array $sourceLine 源代码行
+     * @return string HTML代码
+     */
+    private static function generateCodeContainer(int $key, array $trace, array $sourceLine): string
+    {
+        $clazz = $trace["class"] ?? "";
+        $type = $trace["type"] ?? "";
+        $function = $trace['function'] ?? "";
+        
+        $container = "<template id=\"header{$key}\"><div class=\"param-group\"><div class=\"param-item\">";
+        $container .= "<span class=\"highlight-class\">$clazz</span>";
+        $container .= "<span class=\"highlight-type\">$type</span>";
+
+        if (!empty($function)) {
+            $container .= "<span class=\"highlight-function\">{$function}(";
+            
+            // 添加函数参数
+            $args = $trace['args'] ?? [];
+            foreach ($args as $i => $arg) {
+                $color = ($i % 2 == 0) ? "highlight-args1" : "highlight-args2";
+                $argStr = str_replace("\n", "<br>", print_r($arg, true));
+                $container .= "<span class=\"highlight-args $color\" style=\"margin-right: 4px\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
+            }
+            
+            $container .= ")</span>";
+        }
+
+        $container .= "</div></div></template>";
+        $container .= "<template id=\"file{$key}\">";
+
+        // 添加源代码行
+        foreach ($sourceLine as $line) {
+            $container .= $line ;
+
+        }
+
+        $container .= "</template><br>";
+
+        return $container;
+    }
 
     /**
-     * @param string $file 错误文件名
-     * @param int $line 错误文件行,若为-1则指定msg查找
-     * @param string $msg 当line为-1才有效
-     * @return array
+     * 添加请求相关信息到错误模板
+     * 
+     * @param string $tpl 错误模板
+     * @return string 更新后的模板
      */
-    public
-    static function errorFile(string $file, int $line = -1, string $msg = ""): array
+    private static function addRequestInfo(string $tpl): string
     {
-        $lineCount = 15;
+        $request = Context::instance()->request();
+
+        // 基本请求信息
+        $requestInfo = $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI'] . "<br>";
+        
+        // 请求头信息
+        $headers = $request->getHeaders();
+        $REQUEST_HEADERS = "";
+        foreach ($headers as $key => $value) {
+            if (empty($value)) continue;
+            $requestInfo .= "$key: $value<br>";
+            $REQUEST_HEADERS .= "<tr><td class=\"key\">$key</td><td class=\"value\">$value</td></tr>";
+        }
+
+        // 请求体
+        $raw = Arguments::raw();
+        $requestInfo .= "<br>" . (empty($raw) ? "(empty)" : $raw);
+
+        $route = $request->getRoute() ?? new RouteObject();
+        // 路由信息
+        $REQUEST_ROUTING = "<tr><td class=\"key\">Module</td><td class=\"value\">{$route->module}</td></tr>"
+            . "<tr><td class=\"key\">Controller</td><td class=\"value\">{$route->controller}</td></tr>"
+            . "<tr><td class=\"key\">Action</td><td class=\"value\">{$route->action}</td></tr>";
+
+        // 服务器信息
+        $REQUEST_SERVER = "";
+        foreach ($_SERVER as $key => $value) {
+            $REQUEST_SERVER .= "<tr><td class=\"key\">$key</td><td class=\"value\">$value</td></tr>";
+        }
+
+        // 替换模板变量
+        return str_replace([
+            "{REQUEST_INFO}",
+            "{REQUEST_URI}",
+            "{REQUEST_METHOD}",
+            "{REQUEST_HEADERS}",
+            "{REQUEST_BODY}",
+            "{REQUEST_ROUTING}",
+            "{REQUEST_SERVER}"
+        ], [
+            $requestInfo,
+            $request->getNowAddress(),
+            $_SERVER['REQUEST_METHOD'],
+            $REQUEST_HEADERS,
+            $raw,
+            $REQUEST_ROUTING,
+            $REQUEST_SERVER
+        ], $tpl);
+    }
+
+    /**
+     * 获取错误文件的相关代码行
+     * 
+     * @param string $file 文件路径
+     * @param int $line 行号，-1表示使用关键字查找
+     * @param string $msg 关键字
+     * @return array 包含行号和代码行的数组
+     */
+    public static function errorFile(string $file, int $line = -1, string $msg = ""): array
+    {
+        $lineCount = 15; // 上下文行数
+        
         if (!(file_exists($file) && is_file($file))) {
             return [];
         }
+
         $data = file($file);
+        if ($data === false) {
+            return [];
+        }
+
         $count = count($data) - 1;
         $returns = [];
+
+        // 如果未指定行号，通过关键字查找
         if ($line == -1) {
-            //查找文本
             for ($i = 0; $i <= $count; $i++) {
                 if (str_contains($data[$i], $msg)) {
                     $line = $i + 1;
@@ -263,61 +325,65 @@ EOF;
                 }
             }
         }
+
         $returns["line"] = $line;
-        $start = $line - $lineCount;
-        if ($start < 1) {
-            $start = 1;
-        }
-        $end = $line + $lineCount;
-        if ($end > $count) {
-            $end = $count + 1;
-        }
 
+        // 计算显示范围
+        $start = max(1, $line - $lineCount);
+        $end = min($count + 1, $line + $lineCount);
+
+        // 生成代码行HTML
         for ($i = $start; $i <= $end; $i++) {
-
             $number = '<span class="ln-num" data-num="' . $i . '"></span>';
-
+            
             if ($i == $line) {
                 $returns[] = "<span id='current'>" . $number . self::highlightCode($data[$i - 1]) . "</span>";
             } else {
                 $returns[] = $number . self::highlightCode($data[$i - 1]);
             }
         }
+
         return $returns;
     }
 
     /**
-     * 高亮代码
-     * @param string $code
-     * @return bool|string|string[]
+     * 代码高亮处理
+     * 
+     * @param string $code 需要高亮的代码
+     * @return string 高亮后的HTML
      */
-    private
-    static function highlightCode(string $code): array|bool|string
+    private static function highlightCode(string $code): string
     {
+        // 处理注释标记，避免highlight_string解析错误
         $code = preg_replace('/(\/\*\*)/', '///**', $code);
         $code = preg_replace('/(\s\*)[^\/]/', '//*', $code);
         $code = preg_replace('/(\*\/)/', '//*/', $code);
+
+        // 高亮处理
         if (preg_match('/<\?(php)?[^[:graph:]]/i', $code)) {
             $return = highlight_string($code, true);
         } else {
             $return = preg_replace('/(&lt;\?php)+/i', "",
                 highlight_string("<?php " . $code, true));
         }
+
+        // 还原注释标记
         return str_replace(['//*/', '///**', '//*'], ['*/', '/**', '*'], $return);
     }
 
-
     /**
-     * 报错退出
-     * @param int $errno
-     * @param string $err_str
-     * @param string $err_file
-     * @param int $err_line
-     * @return bool
+     * 处理PHP错误
+     * 
+     * 将PHP错误转换为异常，统一错误处理流程
+     * 
+     * @param int $errno 错误级别
+     * @param string $err_str 错误信息
+     * @param string $err_file 错误文件
+     * @param int $err_line 错误行号
+     * @return bool 是否处理了错误
      * @throws AppExitException
      */
-    public
-    static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): bool
+    public static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): bool
     {
         $str = match ($errno) {
             E_WARNING => "WARNING",
@@ -326,8 +392,8 @@ EOF;
             8192 => "DEPRECATED",
             default => "ERROR"
         };
-        ErrorHandler::appException(new ErrorException("$str: $err_str in $err_file on line $err_line"));
+
+        self::appException(new ErrorException("$str: $err_str in $err_file on line $err_line"));
         return true;
     }
-
 }

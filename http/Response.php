@@ -1,94 +1,195 @@
 <?php
 declare(strict_types=1);
 
-namespace nova\framework\request;
+namespace nova\framework\http;
 
 use DOMDocument;
 use Exception;
 use nova\framework\App;
+use nova\framework\core\Context;
+use nova\framework\core\Logger;
+use nova\framework\core\NovaApp;
 use nova\framework\event\EventManager;
-use nova\framework\log\Logger;
-use nova\framework\text\Json;
-use nova\framework\text\JsonEncodeException;
+use nova\framework\json\Json;
+use nova\framework\json\JsonEncodeException;
 use SimpleXMLElement;
 use function nova\framework\file_type;
 
-class Response
+/**
+ * HTTP响应类
+ * 用于处理各种类型的HTTP响应，包括JSON、XML、HTML、文件下载等
+ */
+class Response extends NovaApp
 {
+    /** @var mixed 响应数据 */
     protected mixed $data;
+    
+    /** @var int HTTP状态码 */
     protected int $code = 200;
+    
+    /** @var array HTTP响应头 */
     protected array $header = [];
 
-
+    /** @var ResponseType 响应类型 */
     protected ResponseType $type;
 
-
-    public function __construct(mixed $data = '', int $code = 200, ResponseType $type = ResponseType::HTML, array $header = [])
+    /**
+     * 构造函数
+     * @param mixed $data 响应数据
+     * @param int $code HTTP状态码
+     * @param ResponseType $type 响应类型
+     * @param array $header 响应头
+     */
+    protected function __construct(mixed $data = '', int $code = 200, ResponseType $type = ResponseType::HTML, array $header = [])
     {
+        parent::__construct();
         $this->data = $data;
         $this->code = $code;
         $this->header = $header;
         $this->type = $type;
     }
 
+    /**
+     * 创建响应对象
+     * @param mixed $data 响应数据
+     * @param int $code HTTP状态码
+     * @param ResponseType $type 响应类型
+     * @param array $header 响应头
+     * @return Response
+     */
+    public static function createResponse(mixed $data = '', int $code = 200, ResponseType $type = ResponseType::HTML, array $header = []): Response
+    {
+        $context = Context::instance();
+        $clazz = $context->config()->get("response", Response::class);
+        if (!class_exists($clazz)) {
+            $clazz = Response::class;
+        }
+        return new $clazz($data, $code, $type, $header);
+    }
+
+    /**
+     * 创建重定向响应
+     * @param string $url 重定向目标URL
+     * @param int $timeout 延迟重定向时间（秒）
+     * @return Response
+     */
     public static function asRedirect(string $url, int $timeout = 0): Response
     {
         if ($timeout === 0) {
-            return new Response('', 302, ResponseType::REDIRECT, ['Location' => $url]);
+            return self::createResponse('', 302, ResponseType::REDIRECT, ['Location' => $url]);
         }
-        return new Response('', 200, ResponseType::REDIRECT, ['refresh' => "$timeout;url=$url"]);
+        return self::createResponse('', 200, ResponseType::REDIRECT, ['refresh' => "$timeout;url=$url"]);
     }
-
+    /**
+     * 创建JSON格式响应
+     * @param array $data 响应数据
+     * @param int $code HTTP状态码
+     * @param array $header 响应头
+     * @return Response
+     */
     public static function asJson(array $data, int $code = 200, array $header = []): Response
     {
-        return new Response($data, $code, ResponseType::JSON, $header);
+        return self::createResponse($data, $code, ResponseType::JSON, $header);
     }
-
+    /**
+     * 创建XML格式响应
+     * @param array $data 响应数据
+     * @param int $code HTTP状态码
+     * @param array $header 响应头
+     * @return Response
+     */
     public static function asXml(array $data, int $code = 200, array $header = []): Response
     {
-        return new Response($data, $code, ResponseType::XML, $header);
+        return self::createResponse($data, $code, ResponseType::XML, $header);
     }
-
+    /**
+     * 创建文件下载响应
+     * @param string $filePath 文件路径
+     * @param string $fileName 文件名
+     * @param array $header 响应头
+     * @return Response
+     */
     public static function asFile(string $filePath, string $fileName, array $header = []): Response
     {
-        $response = new Response('', 200, ResponseType::FILE, $header);
+        $response = self::createResponse('', 200, ResponseType::FILE, $header);
         $response->withFile($filePath, $fileName);
         return $response;
     }
-
+    /**
+     * 创建文本格式响应
+     * @param string $data 响应数据
+     * @param array $header 响应头
+     * @param int $code HTTP状态码
+     * @return Response
+     */
     public static function asText(string $data = '', array $header = [],int $code = 200): Response
     {
-        return new Response($data, $code, ResponseType::TEXT, $header);
+        return self::createResponse($data, $code, ResponseType::TEXT, $header);
     }
-
+    /**
+     * 创建HTML格式响应
+     * @param string $data 响应数据
+     * @param array $header 响应头
+     * @param int $code HTTP状态码
+     * @return Response
+     */
     public static function asHtml(string $data = '', array $header = [],int $code = 200): Response
     {
-        return new Response($data, $code, ResponseType::HTML, $header);
+        return self::createResponse($data, $code, ResponseType::HTML, $header);
     }
-
+    /**
+     * 创建Server-Sent Events响应
+     * @param callable $callback 回调函数
+     * @param array $header 响应头
+     * @param int $code HTTP状态码
+     * @return Response
+     */
     public static function asSSE(callable $callback, array $header = [],int $code = 200): Response
     {
-        $response = new Response($callback, $code, ResponseType::SSE, $header);
+        $response = self::createResponse($callback, $code, ResponseType::SSE, $header);
         $response->withSSE();
         return $response;
     }
 
+    /**
+     * 创建无响应内容
+     * @param string $filePath
+     * @param array $header 响应头
+     * @param int $code
+     * @return Response
+     */
     public static function asStatic(string $filePath, array $header = [],int $code = 200): Response
     {
-        return new Response($filePath, $code, ResponseType::STATIC, $header);
+        return self::createResponse($filePath, $code, ResponseType::STATIC, $header);
     }
 
-
+    /**
+     * 创建无响应内容
+     * @param array $header 响应头
+     * @return Response
+     */
     public static function asNone(array $header = []): Response
     {
-        return new Response('', 200, ResponseType::NONE, $header);
+        return self::createResponse('', 200, ResponseType::NONE, $header);
     }
 
-    public static function asRaw($data, array $header = []): Response
+    /**
+     * 创建原始数据响应
+     * @param mixed $data 响应数据
+     * @param array $header 响应头
+     * @return Response
+     */
+    public static function asRaw(mixed $data, array $header = []): Response
     {
-        return new Response($data, 200, ResponseType::RAW, $header);
+        return self::createResponse($data, 200, ResponseType::RAW, $header);
     }
 
+
+    /**
+     * 设置响应缓存
+     * @param int $min 缓存时间(分钟)
+     * @return Response 返回Response对象以支持链式调用
+     */
     public function cache($min): Response
     {
         $seconds_to_cache = $min * 60;
@@ -100,6 +201,9 @@ class Response
     }
 
 
+    /**
+     * 配置SSE响应所需的头信息
+     */
     private function withSSE(): void
     {
         $this->header['Content-Type'] = 'text/event-stream';
@@ -110,11 +214,21 @@ class Response
         ini_set('zlib.output_compression', false);
     }
 
+    /**
+     * 过滤文件路径，移除潜在的安全隐患
+     * @param string $filePath 需要过滤的文件路径
+     * @return string 过滤后的文件路径
+     */
     private function filterFilePath(string $filePath): string
     {
         return str_replace(["../", "./", "..\\", ".\\"], '', $filePath);
     }
 
+    /**
+     * 设置文件下载相关的响应头和数据
+     * @param string $filePath 文件路径
+     * @param string $fileName 下载时显示的文件名
+     */
     public function withFile(string $filePath, string $fileName): void
     {
         $filePath = $this->filterFilePath($filePath);
@@ -135,6 +249,9 @@ class Response
         }
     }
 
+    /**
+     * 关闭输出缓冲
+     */
     private function closeOutput()
     {
         ob_implicit_flush();
@@ -143,11 +260,15 @@ class Response
         }
     }
 
+    /**
+     * 发送响应到客户端
+     * 根据不同的响应类型调用相应的处理方法
+     */
     public function send(): void
     {
-        if (App::getInstance()->debug) {
+        if ($this->context->isDebug()) {
             $this->header[] = "Server-Timing: " .
-                "Total;dur=" . round((microtime(true) - $GLOBALS['__nova_app_start__']) * 1000, 4) . ";desc=\"Total Time\"";
+                "Total;dur=" . round(($this->context->calcAppTime()) * 1000, 4) . ";desc=\"Total Time\"";
         }
 
         $this->header["Server"] = "Apache";
@@ -203,6 +324,9 @@ class Response
 
     }
 
+    /**
+     * 发送原始数据响应
+     */
     protected function sendRaw():void
     {
         $this->sendHeaders();
@@ -212,6 +336,9 @@ class Response
         echo $this->data;
     }
 
+    /**
+     * 发送HTTP响应头
+     */
     protected function sendHeaders(): void
     {
 
@@ -232,9 +359,13 @@ class Response
 
             }
         }
-        $this->closeOutput();
+       // $this->closeOutput();
     }
 
+    /**
+     * 发送SSE(Server-Sent Events)响应
+     * 用于实现服务器推送功能
+     */
     protected function sendSSE(): void
     {
         set_time_limit(0);
@@ -268,6 +399,10 @@ class Response
         }
     }
 
+    /**
+     * 发送文件下载响应
+     * 支持断点续传功能
+     */
     protected function sendFile(): void
     {
         if ($this->code == 404) {
@@ -301,6 +436,11 @@ class Response
         }
     }
 
+    /**
+     * 解析HTTP Range头
+     * @param int $fileSize 文件大小
+     * @return array|null 返回开始和结束位置的数组，如果无效则返回null
+     */
     protected function parseRange(int $fileSize): ?array
     {
         if (!isset($_SERVER['HTTP_RANGE'])) {
@@ -323,6 +463,11 @@ class Response
         return [$start, $end];
     }
 
+    /**
+     * 输出文件内容
+     * @param int $start 开始位置
+     * @param int $length 长度
+     */
     protected function outputFile(int $start, int $length): void
     {
         $handle = fopen($this->data, 'rb');
@@ -339,6 +484,10 @@ class Response
         fclose($handle);
     }
 
+    /**
+     * 完成请求处理
+     * 用于在发送响应后执行清理工作
+     */
     static function finish(): void
     {
         if (function_exists('fastcgi_finish_request')) {
@@ -347,6 +496,10 @@ class Response
         flush();
     }
 
+    /**
+     * 发送静态文件响应
+     * 支持缓存控制和条件请求
+     */
     private function sendStatic(): void
     {
         $addr = $this->data;
@@ -420,11 +573,16 @@ class Response
 
     }
 
+    /**
+     * 将数组转换为XML格式
+     * @param array $data 需要转换的数组数据
+     * @param SimpleXMLElement $xmlData XML对象引用
+     */
     private function arrayToXml($data, &$xmlData): void
     {
         foreach ($data as $key => $value) {
             if (is_numeric($key)) {
-                $key = 'item' . $key; // 数字键使用“item”前缀
+                $key = 'item' . $key; // 数字键使用"item"前缀
             }
             if (is_array($value)) {
                 $subNode = $xmlData->addChild($key);
@@ -435,6 +593,14 @@ class Response
         }
     }
 
+    /**
+     * 将数组转换为XML字符串
+     * @param array $array 需要转换的数组
+     * @param string $rootElement XML根元素名称
+     * @param string $xmlVersion XML版本
+     * @param string $xmlEncoding XML编码
+     * @return string 生成的XML字符串
+     */
     private function convertArrayToXml($array, $rootElement = 'root', $xmlVersion = '1.0', $xmlEncoding = 'UTF-8'): string
     {
         $xmlData = new SimpleXMLElement("<?xml version=\"$xmlVersion\" encoding=\"$xmlEncoding\"?><$rootElement></$rootElement>");
@@ -442,6 +608,9 @@ class Response
         return $xmlData->asXML();
     }
 
+    /**
+     * 发送XML格式响应
+     */
     private function sendXml(): void
     {
         try {
@@ -460,11 +629,18 @@ class Response
         echo $xmlStr;
     }
 
+    /**
+     * 检查是否为HEAD请求
+     * @return bool 是否为HEAD请求
+     */
     private function isHead(): bool
     {
         return $_SERVER['REQUEST_METHOD'] === 'HEAD';
     }
 
+    /**
+     * 发送HTML格式响应
+     */
     private function sendHtml(): void
     {
         $data = $this->data;
@@ -479,12 +655,17 @@ class Response
     }
 
 
+    /**
+     * 预加载资源
+     * 通过Link header实现资源预加载，优化页面加载性能
+     * @param string $data HTML内容
+     */
     private function preLoad($data): void
     {
         if ($this->isHead()) {
             return;
         }
-        if (App::getInstance()->getReq()->isPjax()) {
+        if ($this->context->request()->isPjax()) {
             return;
         }
         try {
@@ -558,6 +739,9 @@ class Response
 
     }
 
+    /**
+     * 发送文本格式响应
+     */
     private function sendText(): void
     {
         $this->sendHeaders();
@@ -567,6 +751,10 @@ class Response
         echo $this->data;
     }
 
+    /**
+     * 获取响应数据
+     * @return string 响应数据
+     */
     public function getData():string
     {
         return $this->data ?? "";

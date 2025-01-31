@@ -1,13 +1,12 @@
 <?php
-declare(strict_types=1);
 
-namespace nova\framework\request;
+namespace nova\framework\http;
 
-use nova\framework\text\Json;
-use nova\framework\text\JsonDecodeException;
-use nova\framework\text\Text;
+use nova\framework\core\Text;
+use nova\framework\json\Json;
+use nova\framework\json\JsonDecodeException;
 
-class Argument
+class Arguments
 {
     /**
      * 从get参数中获取
