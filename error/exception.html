@@ -14,10 +14,11 @@
             --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
-        .main-container-1{
+        .main-container-1 {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
+            box-sizing: border-box;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -36,6 +37,9 @@
             padding: 20px!important;
             background: linear-gradient(to right, #fff, #f8f9fa);
             border-left: 4px solid var(--theme);
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         .error-details {
@@ -63,18 +67,22 @@
 
         .main-container {
             display: grid;
-            grid-template-columns: 250px 1fr;
+            grid-template-columns: 250px minmax(0, 1fr);
             gap: 20px;
             margin-top: 20px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .file-list {
-            width: 200px;
             list-style: none;
             margin: 0;
             background: #f8f9fa;
             border-radius: var(--border-radius);
             padding: 10px 0;
+            width: 100%;
+            overflow-x: hidden;
+            word-break: break-word;
         }
 
         .file-list li {
@@ -85,6 +93,8 @@
             transition: all 0.2s ease;
             font-size: 15px;
             word-wrap: break-word;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .file-list li:hover {
@@ -104,6 +114,8 @@
         .code-container {
             flex-grow: 1;
           overflow: hidden;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .container{
@@ -127,6 +139,8 @@
             position: relative;
             z-index: 2;
             overflow: auto;
+
+            width: 100%;
         }
 
         #current {
@@ -135,7 +149,7 @@
         }
 
         #current .ln-num {
-            padding: 5px 0;
+            padding: 5px 8px;
             background: var(--theme-70);
         }
 
@@ -207,6 +221,10 @@
             padding: 15px;
             border-radius: var(--border-radius);
             font-family: 'Fira Code', 'Consolas', monospace;
+            width: 100%;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .request-method {
@@ -246,9 +264,7 @@
             background: #f1f5f9;
             border-right: 1px solid #e2e8f0;
         }
-        .param-group {
-          padding: 10px;
-        }
+
         .param-item {
           margin: 5px 0;
           font-size: 14px;
@@ -285,6 +301,8 @@
             position: sticky;
             top: 20px;
             height: fit-content;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .file-list-container {
@@ -301,6 +319,9 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .code-section {
@@ -315,16 +336,22 @@
         .code-content {
             margin: 0;
             padding: 15px;
+            overflow-x: auto;
+            white-space: pre;
+            word-wrap: normal;
         }
 
         .section-group {
             display: grid;
             gap: 20px;
             margin-bottom: 20px;
+            width: 100%;
         }
 
         .request-section {
             padding: 20px;
+            width: 100%;
+            overflow-x: hidden;
         }
 
         .request-info {
@@ -341,13 +368,14 @@
         }
 
         .table-wrapper {
+            width: 100%;
             overflow-x: auto;
-            border-radius: var(--border-radius);
-            border: 1px solid #e2e8f0;
+            box-sizing: border-box;
         }
 
         .info-table {
             width: 100%;
+            min-width: 600px;
             border-collapse: collapse;
         }
 
@@ -380,7 +408,76 @@
 
             .sidebar {
                 position: static;
+                width: 100%;
             }
+
+            .main-container-1 {
+                padding: 10px;
+            }
+        }
+
+        *, *:before, *:after {
+            box-sizing: border-box;
+        }
+
+        /* 代码行样式优化 */
+        .code-line {
+            display: flex;
+            align-items: center;
+            line-height: 1.5;
+            font-size: 13px;
+            white-space: pre;
+        }
+
+        /* 行号样式优化 */
+        .ln-num {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 8px;
+            min-width: 40px;
+            background: #f1f5f9;
+            border-right: 1px solid #e2e8f0;
+            color: #64748b;
+            user-select: none;
+            font-family: monospace;
+        }
+
+        /* 代码内容样式 */
+        .code-content {
+            display: inline-flex;
+            padding: 0;
+            font-family: 'Fira Code', Consolas, Monaco, 'Courier New', monospace;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        /* 当前行高亮 */
+
+
+        #current .ln-num {
+            font-weight: bold;
+        }
+
+        /* 代码容器样式 */
+        .code-section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        /* 确保pre标签不会破坏布局 */
+        pre {
+            margin: 0;
+            padding: 0;
+            display: inline;
+        }
+
+        /* 代码块整体容器 */
+        .code-block {
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
         }
     </style>
 </head>
@@ -391,12 +488,10 @@
         <div class="error-details">
             <h1 class="error-title">{ERROR_TYPE}</h1>
             <div class="error-message">{ERROR_MESSAGE}</div>
-            <div class="error-file">{ERROR_FILE}</div>
         </div>
         <div class="version-details">
             <div class="version-item">PHP {PHP_VERSION}</div>
             <div class="version-item">Nova {NOVA_VERSION}</div>
-            <div class="version-item">Time: {ERROR_TIME}</div>
         </div>
     </div>
     <div class="main-container">
@@ -491,40 +586,108 @@
     </div>
 </div>
 
+
+<div id="templates" style="display: none;">
+    {TEMPLATE_CONTENTS}
+</div>
+
+
 <script>
-
-
-    //监听窗口宽度变化
-    window.onresize = function () {
-        const codeElement = document.getElementById('code');
-        const scrollWidth = codeElement.offsetWidth;
-        const currentElement = document.getElementById('current');
-        currentElement.style.width = scrollWidth + 'px';
-    };
-
     function showCode(fileKey) {
-        const codeElement = document.getElementById('code');
-        const headerElement = document.getElementById('header');
-        const headerTpl = document.getElementById("header" + fileKey).innerHTML;
-        const template = document.getElementById("file" + fileKey).innerHTML;
+        try {
+            const codeElement = document.getElementById('code');
+            const headerElement = document.getElementById('header');
+            
+            // 获取模板内容
+            const headerTpl = document.getElementById(`header${fileKey}`);
+            const template = document.getElementById(`file${fileKey}`);
+            
+            // 详细的错误检查
+            if (!headerTpl) {
+                console.error(`Header template not found for key: ${fileKey}`);
+                return;
+            }
+            if (!template) {
+                console.error(`File template not found for key: ${fileKey}`);
+                return;
+            }
+            if (!codeElement) {
+                console.error('Code element not found');
+                return;
+            }
+            if (!headerElement) {
+                console.error('Header element not found');
+                return;
+            }
 
-        // Set active class
-        document.querySelectorAll('.file-list li').forEach(li => li.classList.remove('active'));
-        document.querySelector(`.file-list li[onclick="showCode('${fileKey}')"]`).classList.add('active');
+            // 更新活动状态
+            document.querySelectorAll('.file-list li').forEach(li => {
+                li.classList.remove('active');
+                if (li.getAttribute('data-file-key') === fileKey) {
+                    li.classList.add('active');
+                }
+            });
 
-        // Update code content
-        codeElement.innerHTML = template;
-        headerElement.innerHTML = headerTpl;
+            // 更新内容
+            try {
+                headerElement.innerHTML = headerTpl.innerHTML || '';
+                codeElement.innerHTML = template.innerHTML || '';
+            } catch (e) {
+                console.error('Error updating content:', e);
+                return;
+            }
 
-        setTimeout(() => {
-            const scrollWidth = codeElement.offsetWidth;
-            const currentElement = document.getElementById('current');
-            currentElement.style.width = scrollWidth + 'px';
-        });
+            // 调整宽度
+            setTimeout(() => {
+                const currentElement = document.getElementById('current');
+                if (currentElement && codeElement) {
+                    const scrollWidth = codeElement.offsetWidth;
+                    currentElement.style.width = `${scrollWidth}px`;
+                }
+            }, 0);
+        } catch (error) {
+            console.error('Error in showCode:', error);
+        }
     }
 
-    // Initialize with the first file
-    showCode('0');
+    // 初始化函数
+    function initializeErrorPage() {
+        try {
+            // 检查必要的元素是否存在
+            const templates = document.getElementById('templates');
+            if (!templates) {
+                console.error('Templates container not found');
+                return;
+            }
+
+            // 获取第一个文件并显示
+            const firstFile = document.querySelector('.file-list li');
+            if (firstFile) {
+                const fileKey = firstFile.getAttribute('data-file-key') || '0';
+                showCode(fileKey);
+            } else {
+                console.error('No files found in the list');
+            }
+        } catch (error) {
+            console.error('Error during initialization:', error);
+        }
+    }
+
+    // 等待DOM加载完成
+    document.addEventListener('DOMContentLoaded', initializeErrorPage);
+
+    // 优化的resize事件处理
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const codeElement = document.getElementById('code');
+            const currentElement = document.getElementById('current');
+            if (codeElement && currentElement) {
+                currentElement.style.width = `${codeElement.offsetWidth}px`;
+            }
+        }, 100);
+    });
 </script>
 </body>
 </html>
