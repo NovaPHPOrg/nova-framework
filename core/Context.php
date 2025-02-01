@@ -81,12 +81,6 @@ class Context
     protected array $vars = [];
 
     /**
-     * @var Context|null 单例实例
-     * 存储Context的唯一实例
-     */
-    private static ?Context $instance = null;
-
-    /**
      * 获取Context单例实例
      * 确保整个应用中只有一个Context实例
      * 
@@ -95,14 +89,11 @@ class Context
      */
     static function instance(): Context
     {
-        if (self::$instance === null) {
-            global $context;
-            if (!$context) {
-                throw new RuntimeException('Context is not initialized');
-            }
-            self::$instance = $context;
+        global $context;
+        if (!$context) {
+            throw new RuntimeException('Context is not initialized');
         }
-        return self::$instance;
+        return $context;
     }
     /**
      * 构造函数
@@ -148,16 +139,6 @@ class Context
         return $this->instances[$name];
     }
 
-    /**
-     * 销毁所有注册的实例
-     * 用于清理资源，通常在应用结束时调用
-     */
-    public function destroyInstances(): void
-    {
-        foreach ($this->instances as $instance) {
-           unset($instance);
-        }
-    }
 
     /**
      * 初始化类加载器
@@ -299,13 +280,20 @@ class Context
         return microtime(true) - $this->start_time;
     }
 
+    public function destroy(): void
+    {
+        foreach ($this->instances as &$instance) {
+           $instance = null;
+        }
+        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES = $_SESSION = $_SERVER = null;
+    }
     /**
      * 析构函数
      * 清理实例资源
      */
     public function __destruct()
     {
-        $this->destroyInstances();
+        $this->destroy();
     }
 
     /**

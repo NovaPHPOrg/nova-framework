@@ -169,69 +169,66 @@ class ErrorHandler
 
             // 生成文件列表项
             $TEMPLATE_LIST .= $first 
-                ? "<li class=\"active\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>"
-                : "<li onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>";
+                ? "<li class=\"active\" data-file-key=\"{$key}\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>"
+                : "<li data-file-key=\"{$key}\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>";
             $first = false;
 
             // 生成代码容器
-            $TEMPLATE_CONTAINER .= self::generateCodeContainer($key, $trace, $sourceLine);
+            $TEMPLATE_CONTAINER .= "<div id=\"header{$key}\">";
+            $TEMPLATE_CONTAINER .= "<div class=\"param-group\"><div class=\"param-item\">";
+            
+            // 添加类名、类型和函数信息
+            $clazz = $trace["class"] ?? "";
+            $type = $trace["type"] ?? "";
+            $function = $trace['function'] ?? "";
+            
+            if (!empty($clazz)) {
+                $TEMPLATE_CONTAINER .= "<span class=\"highlight-class\">{$clazz}</span>";
+            }
+            if (!empty($type)) {
+                $TEMPLATE_CONTAINER .= "<span class=\"highlight-type\">{$type}</span>";
+            }
+            if (!empty($function)) {
+                $TEMPLATE_CONTAINER .= "<span class=\"highlight-function\">{$function}(";
+                
+                // 添加函数参数
+                if (!empty($trace['args'])) {
+                    foreach ($trace['args'] as $i => $arg) {
+                        $color = ($i % 2 == 0) ? "highlight-args1" : "highlight-args2";
+                        $argStr = htmlspecialchars(print_r($arg, true), ENT_QUOTES);
+                        // 限制参数显示长度为最多200个UTF-8字符
+                        if (mb_strlen($argStr, 'UTF-8') > 200) {
+                            $argStr = mb_substr($argStr, 0, 197, 'UTF-8') . '...';
+                        }
+
+                        $argStr = str_replace("\n", "<br>", $argStr);
+                        $TEMPLATE_CONTAINER .= "<span class=\"highlight-args {$color}\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
+                    }
+                }
+                
+                $TEMPLATE_CONTAINER .= ")</span>";
+            }
+            
+            $TEMPLATE_CONTAINER .= "</div></div></div>";
+            
+            // 添加代码内容
+            $TEMPLATE_CONTAINER .= "<div id=\"file{$key}\">";
+            foreach ($sourceLine as $line) {
+                $TEMPLATE_CONTAINER .= "<div class=\"code-line\">" . $line. "</div>";
+            }
+            $TEMPLATE_CONTAINER .= "</div>";
         }
+
 
         // 替换模板变量
         $tpl = str_replace("{TEMPLATE_LIST}", $TEMPLATE_LIST, $tpl);
-        $tpl = str_replace("{TEMPLATE_CONTAINER}", $TEMPLATE_CONTAINER, $tpl);
+        $tpl = str_replace("{TEMPLATE_CONTENTS}", $TEMPLATE_CONTAINER, $tpl);
 
 
         // 添加请求信息
         $tpl = self::addRequestInfo($tpl);
 
         return $tpl;
-    }
-
-    /**
-     * 生成代码容器HTML
-     * 
-     * @param int $key 追踪索引
-     * @param array $trace 追踪信息
-     * @param array $sourceLine 源代码行
-     * @return string HTML代码
-     */
-    private static function generateCodeContainer(int $key, array $trace, array $sourceLine): string
-    {
-        $clazz = $trace["class"] ?? "";
-        $type = $trace["type"] ?? "";
-        $function = $trace['function'] ?? "";
-        
-        $container = "<template id=\"header{$key}\"><div class=\"param-group\"><div class=\"param-item\">";
-        $container .= "<span class=\"highlight-class\">$clazz</span>";
-        $container .= "<span class=\"highlight-type\">$type</span>";
-
-        if (!empty($function)) {
-            $container .= "<span class=\"highlight-function\">{$function}(";
-            
-            // 添加函数参数
-            $args = $trace['args'] ?? [];
-            foreach ($args as $i => $arg) {
-                $color = ($i % 2 == 0) ? "highlight-args1" : "highlight-args2";
-                $argStr = str_replace("\n", "<br>", print_r($arg, true));
-                $container .= "<span class=\"highlight-args $color\" style=\"margin-right: 4px\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
-            }
-            
-            $container .= ")</span>";
-        }
-
-        $container .= "</div></div></template>";
-        $container .= "<template id=\"file{$key}\">";
-
-        // 添加源代码行
-        foreach ($sourceLine as $line) {
-            $container .= $line ;
-
-        }
-
-        $container .= "</template><br>";
-
-        return $container;
     }
 
     /**

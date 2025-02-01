@@ -33,4 +33,4 @@ include_once "helper.php";
 App::getInstance()->start();
 
 // 清理上下文对象
-unset($context);
+$context = null;

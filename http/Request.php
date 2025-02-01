@@ -131,12 +131,6 @@ class Request
      */
     public function getHttpScheme(): string
     {
-        static $httpScheme = null;
-
-        if ($httpScheme !== null) {
-            return $httpScheme;
-        }
-
         // 判断是否为 HTTPS
         if ($this->isHttps()) {
             $httpScheme = 'https://';
