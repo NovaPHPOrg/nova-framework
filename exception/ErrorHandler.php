@@ -196,6 +196,11 @@ class ErrorHandler
                     foreach ($trace['args'] as $i => $arg) {
                         $color = ($i % 2 == 0) ? "highlight-args1" : "highlight-args2";
                         $argStr = htmlspecialchars(print_r($arg, true), ENT_QUOTES);
+                        // 限制参数显示长度为最多200个UTF-8字符
+                        if (mb_strlen($argStr, 'UTF-8') > 200) {
+                            $argStr = mb_substr($argStr, 0, 197, 'UTF-8') . '...';
+                        }
+
                         $argStr = str_replace("\n", "<br>", $argStr);
                         $TEMPLATE_CONTAINER .= "<span class=\"highlight-args {$color}\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
                     }
