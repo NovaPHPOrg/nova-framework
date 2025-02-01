@@ -59,13 +59,13 @@ class Config
     private function loadConfig(): void
     {
         if (file_exists($this->configPath)) {
-            $this->config = require_once $this->configPath;
+            $this->config = require $this->configPath;
         }else{
             $exampleConfigPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
             if (!file_exists($exampleConfigPath)) {
                 exit("配置文件不存在：config.php");
             }
-            $this->config = require_once $exampleConfigPath;
+            $this->config = require $exampleConfigPath;
         }
     }
 

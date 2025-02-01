@@ -137,7 +137,7 @@ class App extends NovaApp
                 'trace' => $e->getTraceAsString()
             ]);
 
-            echo "Response send error: " . $e->getMessage();
+            $this->printException($e);
         }
     }
 
@@ -288,5 +288,20 @@ class App extends NovaApp
     private function onApplicationError(string $uri): ?Response
     {
         return null;
+    }
+
+
+    private function printException(\Exception $e): void
+    {
+        if ($this->context->isDebug()) {
+            echo "<pre>";
+            echo "<h2>Exception: " . $e->getMessage() . "</h2><br>";
+            echo "File: " . $e->getFile() . ":" . $e->getLine() . "<br>";
+            echo "Trace: <br>";
+            echo $e->getTraceAsString();
+            echo "</pre>";
+        } else {
+            echo "<h2>An error occurred, please try again later.</h2>";
+        }
     }
 }
