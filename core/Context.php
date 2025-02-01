@@ -148,16 +148,6 @@ class Context
         return $this->instances[$name];
     }
 
-    /**
-     * 销毁所有注册的实例
-     * 用于清理资源，通常在应用结束时调用
-     */
-    public function destroyInstances(): void
-    {
-        foreach ($this->instances as $instance) {
-           unset($instance);
-        }
-    }
 
     /**
      * 初始化类加载器
@@ -305,7 +295,7 @@ class Context
      */
     public function __destruct()
     {
-        $this->destroyInstances();
+        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES = $_SESSION = $_SERVER = [];
     }
 
     /**
