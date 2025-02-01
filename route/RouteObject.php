@@ -91,7 +91,7 @@ class RouteObject
 
             // 检查返回类型
             $returnType = $reflection->getReturnType();
-            if ($returnType == null || $returnType->getName() != "nova\\framework\\request\\Response") {
+            if ($returnType == null || $returnType->getName() != Response::class) {
                 throw new ControllerException("Action return type must be Response: $controllerClazz::{$this->action}", $this);
             }
 

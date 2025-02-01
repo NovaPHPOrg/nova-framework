@@ -44,7 +44,7 @@ class App extends NovaApp
     {
         return Context::instance()->getOrCreateInstance("App", function () {
             $applicationClazz = "app\\Application";
-            if (class_exists($applicationClazz) && ($imp = class_implements($applicationClazz)) && in_array(App::class, $imp)) {
+            if (class_exists($applicationClazz) && is_subclass_of($applicationClazz, App::class)) {
                 return new $applicationClazz();
             }
             return new App();
