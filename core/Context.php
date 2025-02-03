@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace nova\framework\core;
 
 use nova\framework\http\Request;
+use nova\framework\http\Response;
 use RuntimeException;
 
 /**
@@ -319,5 +320,15 @@ class Context
     public function get(string $name,mixed $default = null): mixed
     {
         return $this->vars[$name] ?? $default;
+    }
+
+    public function setResponseClass(string $class): void
+    {
+        $this->set('response.class', $class);
+    }
+
+    public function getResponseClass(): string
+    {
+        return $this->get('response.class', Response::class);
     }
 }
