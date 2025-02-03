@@ -60,7 +60,7 @@ class Response extends NovaApp
     public static function createResponse(mixed $data = '', int $code = 200, ResponseType $type = ResponseType::HTML, array $header = []): Response
     {
         $context = Context::instance();
-        $clazz = $context->config()->get("response", Response::class);
+        $clazz = $context->getResponseClass();
         if (!class_exists($clazz)) {
             $clazz = Response::class;
         }
@@ -210,8 +210,8 @@ class Response extends NovaApp
         $this->header['Cache-Control'] = 'no-cache';
         $this->header['Connection'] = 'keep-alive';
         $this->header['X-Accel-Buffering'] = 'no';
-        ini_set('output_buffering', 'off');
-        ini_set('zlib.output_compression', false);
+       // ini_set('output_buffering', 'off');
+       // ini_set('zlib.output_compression', false);
     }
 
     /**
@@ -374,29 +374,20 @@ class Response extends NovaApp
         if ($this->isHead()) {
             return;
         }
-        while (true) {
-            $result = $callback();
-            if ($result === null) {
-                $echo = "data: \n\n";
-            } elseif (!$result) {
-                break;
-            } else {
-                if (!isset($result["event"]) || !isset($result["data"])) {
-                    $echo = "data: \n\n";
-                    Logger::warning("SSE data format error, event and data is required");
-                } else {
-                    $echo = "event: " . $result["event"] . PHP_EOL;
-                    $echo .= "data: " . $result["data"] . PHP_EOL;
-                    $echo .= PHP_EOL;
-                }
+        $callback(function ($data, $event = null) {
+            if ($data == null) return;
+            echo "event: $event\n";
+            echo "data: " . $data . "\n\n";
+            ob_flush();
+            flush();
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
             }
-            Logger::info("SSE: $echo");
-            echo $echo;
-            if (connection_aborted()) {
-                break;
-            }
+        });
+        while (!connection_aborted()) {
             sleep(1);
         }
+
     }
 
     /**
@@ -633,7 +624,7 @@ class Response extends NovaApp
      * 检查是否为HEAD请求
      * @return bool 是否为HEAD请求
      */
-    private function isHead(): bool
+    protected function isHead(): bool
     {
         return $_SERVER['REQUEST_METHOD'] === 'HEAD';
     }
