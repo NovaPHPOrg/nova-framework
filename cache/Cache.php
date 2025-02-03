@@ -25,7 +25,7 @@ class Cache {
         $driver = $driverClazz ?? config('cache.driver');
         
         try {
-            if (!class_exists($driver) || !in_array('nova\framework\cache\iCacheDriver', class_implements($driver))) {
+            if ($driver == null || !class_exists($driver) || !in_array('nova\framework\cache\iCacheDriver', class_implements($driver))) {
                 throw new CacheException("Cache driver {$driver} not found");
             }
             $this->driver = new $driver($shared);
