@@ -230,6 +230,11 @@ class Route extends NovaApp
         return null;
     }
 
+    public function getUri(): string
+    {
+        return $this->uri;
+    }
+
     /**
      * 获取所有注册的路由
      * 如果配置了默认路由，会添加默认的模块/控制器/动作路由
