@@ -77,7 +77,7 @@ class Loader
         $this->autoloadFilesCache = [];
 
         // 设置缓存文件路径
-        $this->file = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR
+        $this->file = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR
             . 'cache' . DIRECTORY_SEPARATOR . 'autoload.php';
 
         // 确保缓存目录存在
