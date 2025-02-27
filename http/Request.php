@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -14,7 +17,7 @@ use nova\framework\route\RouteObject;
 
 /**
  * Request类 - 处理HTTP请求
- * 
+ *
  * 该类负责处理所有与HTTP请求相关的操作，包括：
  * - 请求头的处理
  * - URL和域名解析
@@ -27,7 +30,6 @@ class Request
      * 请求唯一标识符
      */
     protected string $id;
-    
 
     /**
      * 路由对象
@@ -47,12 +49,12 @@ class Request
         $this->id = uniqid("req_", true);
     }
 
-    function setRoute(RouteObject $route): void
+    public function setRoute(RouteObject $route): void
     {
         $this->route = $route;
     }
-    
-    function getRoute(): ?RouteObject
+
+    public function getRoute(): ?RouteObject
     {
         return $this->route;
     }
@@ -77,12 +79,12 @@ class Request
 
     /**
      * 获取header头部内容
-     * @param string $headName 头部字段名称
+     * @param  string     $headName 头部字段名称
      * @return mixed|null 返回头部值，不存在时返回null
      */
     public function getHeaderValue($headName): mixed
     {
-        if(empty($this->headers)){
+        if (empty($this->headers)) {
             $this->initHeaders();
         }
         if (isset($this->headers[$headName])) {
@@ -97,7 +99,7 @@ class Request
      */
     public function getHeaders(): array
     {
-        if(empty($this->headers)){
+        if (empty($this->headers)) {
             $this->initHeaders();
         }
         return $this->headers;
@@ -204,17 +206,19 @@ class Request
 
     /**
      * 获取服务器IP地址
-     * @param Context $context 上下文对象
-     * @return string 返回服务器IP地址
+     * @param  Context $context 上下文对象
+     * @return string  返回服务器IP地址
      */
     public function getServerIp(Context $context): string
     {
         $ip = $context->config()->get('ip');
-        if (!empty($ip))return $ip;
+        if (!empty($ip)) {
+            return $ip;
+        }
 
         $data = gethostbyname($_SERVER["SERVER_NAME"]);
         if ($data !== $_SERVER["SERVER_NAME"]) {
-            $context->config()->set('ip',$data);
+            $context->config()->set('ip', $data);
             return $data;
         }
         return $data;
@@ -285,9 +289,9 @@ class Request
 
     /**
      * 获取GET参数
-     * @param string|null $key 参数键名
-     * @param mixed|null $default 默认值
-     * @return mixed 返回参数值
+     * @param  string|null $key     参数键名
+     * @param  mixed|null  $default 默认值
+     * @return mixed       返回参数值
      */
     public function get(string $key = null, mixed $default = null): mixed
     {
@@ -296,9 +300,9 @@ class Request
 
     /**
      * 获取POST参数
-     * @param string|null $key 参数键名
-     * @param mixed|null $default 默认值
-     * @return mixed 返回参数值
+     * @param  string|null $key     参数键名
+     * @param  mixed|null  $default 默认值
+     * @return mixed       返回参数值
      */
     public function post(string $key = null, mixed $default = null): mixed
     {
@@ -307,9 +311,9 @@ class Request
 
     /**
      * 获取任意请求参数（GET/POST）
-     * @param string|null $key 参数键名
-     * @param mixed|null $default 默认值
-     * @return mixed 返回参数值
+     * @param  string|null $key     参数键名
+     * @param  mixed|null  $default 默认值
+     * @return mixed       返回参数值
      */
     public function arg(string $key = null, mixed $default = null): mixed
     {

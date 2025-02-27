@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -12,12 +13,14 @@ declare(strict_types=1);
 namespace nova\framework\core;
 
 use Exception;
-use RuntimeException;
+
 use function nova\framework\isCli;
+
+use RuntimeException;
 
 /**
  * 增强版日志处理类
- * 
+ *
  * 特性：
  * - 支持 PSR-3 标准的8个日志级别
  * - 实现缓冲区机制提高性能
@@ -25,7 +28,7 @@ use function nova\framework\isCli;
  * - 自动日志轮转和文件分割
  * - 支持临时文件写入，避免并发问题
  * - CLI模式下实时输出日志
- * 
+ *
  * 使用示例：
  * ```php
  * Logger::info("用户登录成功");
@@ -52,28 +55,28 @@ class Logger extends NovaApp
 
     /** @var bool 是否处于调试模式 */
     private bool $debug;
-    
+
     /** @var resource|false 日志文件句柄 */
     private $handle;
-    
+
     /** @var string 主日志文件路径 */
     private string $logFile;
-    
+
     /** @var string 临时日志文件路径 */
     private string $tempFile;
-    
+
     /** @var array 日志缓冲区 */
     private array $buffer = [];
-    
+
     /** @var int 缓冲区大小，达到此数量时会自动刷新到文件 */
     private int $bufferSize = 100;
-    
+
     /** @var string 日志目录路径 */
     private string $logDir;
-    
+
     /** @var int 单个日志文件的最大大小（字节） */
     private const int MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    
+
     /** @var int 最大保留的日志文件数量 */
     private const int MAX_FILES = 5;
 
@@ -88,14 +91,14 @@ class Logger extends NovaApp
         $this->logDir = ROOT_PATH . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'logs';
         $this->logFile = $this->logDir . DIRECTORY_SEPARATOR . date('Y-m-d') . '.log';
         $this->tempFile = $this->logDir . DIRECTORY_SEPARATOR . $this->context->getSessionId() . '.log';
-        
+
         $this->initialize();
     }
 
     /**
      * 初始化日志系统
      * 创建日志目录并打开临时文件句柄
-     * 
+     *
      * @throws RuntimeException 当无法创建日志文件时
      */
     private function initialize(): void
@@ -109,8 +112,8 @@ class Logger extends NovaApp
 
     /**
      * 创建目录（如果不存在）
-     * 
-     * @param string $path 要创建的目录路径
+     *
+     * @param  string           $path 要创建的目录路径
      * @throws RuntimeException 当目录创建失败时
      */
     private function createDirectory(string $path): void
@@ -123,9 +126,9 @@ class Logger extends NovaApp
     /**
      * 写入日志
      *
-     * @param mixed $message 日志消息，可以是字符串或任何可JSON序列化的数据
-     * @param string $level 日志级别
-     * @param array $context 上下文信息，将被JSON序列化
+     * @param mixed  $message 日志消息，可以是字符串或任何可JSON序列化的数据
+     * @param string $level   日志级别
+     * @param array  $context 上下文信息，将被JSON序列化
      */
     protected function write($message, string $level, array $context = []): void
     {
@@ -150,7 +153,6 @@ class Logger extends NovaApp
         // 添加到缓冲区
         $this->buffer[] = $logMessage;
 
-
         // 检查是否需要刷新缓冲区
         if (count($this->buffer) >= $this->bufferSize) {
             try {
@@ -165,11 +167,11 @@ class Logger extends NovaApp
 
     /**
      * 格式化日志消息
-     * 
-     * @param mixed $message 原始消息
-     * @param string $level 日志级别
-     * @param array $caller 调用者信息
-     * @param array $context 上下文信息
+     *
+     * @param  mixed  $message 原始消息
+     * @param  string $level   日志级别
+     * @param  array  $caller  调用者信息
+     * @param  array  $context 上下文信息
      * @return string 格式化后的日志字符串
      */
     private function formatLogMessage($message, string $level, array $caller, array $context): string
@@ -177,10 +179,10 @@ class Logger extends NovaApp
         $timestamp = microtime(true);
         $datetime = date('Y-m-d H:i:s', (int)$timestamp);
         $milliseconds = sprintf("%03d", ($timestamp - floor($timestamp)) * 1000);
-        
+
         $messageStr = is_string($message) ? $message : json_encode($message, JSON_UNESCAPED_UNICODE);
         $contextStr = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
-        
+
         return sprintf(
             "[%s.%s] [%s] [%s:%d] %s%s\n",
             $datetime,
@@ -195,7 +197,7 @@ class Logger extends NovaApp
 
     /**
      * 刷新缓冲区，将日志写入文件
-     * 
+     *
      * @throws Exception 当写入文件失败时
      */
     private function flush(): void
@@ -242,7 +244,7 @@ class Logger extends NovaApp
 
     /**
      * 紧急情况：系统不可用
-     * 
+     *
      * @param mixed $message 日志消息
      * @param array $context 上下文信息
      */
@@ -315,12 +317,12 @@ class Logger extends NovaApp
 
     /**
      * 获取Logger单例实例
-     * 
+     *
      * @return Logger
      */
     private static function getInstance(): Logger
     {
-        return Context::instance()->getOrCreateInstance('logger', function() {
+        return Context::instance()->getOrCreateInstance('logger', function () {
             return new Logger();
         });
     }
@@ -334,7 +336,7 @@ class Logger extends NovaApp
         try {
             // 刷新剩余的缓冲区
             $this->flush();
-            
+
             if (is_resource($this->handle)) {
                 fclose($this->handle);
             }
@@ -342,7 +344,7 @@ class Logger extends NovaApp
             // 合并临时日志到主日志文件
             if (file_exists($this->tempFile)) {
                 $this->rotateLogFile();
-                
+
                 $handler = fopen($this->logFile, 'a');
                 if ($handler && flock($handler, LOCK_EX)) {
                     $tmpContent = file_get_contents($this->tempFile);

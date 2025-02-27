@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -8,6 +9,7 @@
  */
 
 declare(strict_types=1);
+
 namespace nova\framework\core;
 
 use Throwable;
@@ -66,8 +68,7 @@ class Loader
 
     private string $hash = '';
 
-
-    private function hash(array $cache):string
+    private function hash(array $cache): string
     {
         return md5(serialize($cache));
     }
@@ -130,7 +131,7 @@ class Loader
      * 设置命名空间映射
      *
      * @param array $namespace 命名空间映射配置
-     *                        格式：['命名空间前缀' => '目录路径']
+     *                         格式：['命名空间前缀' => '目录路径']
      */
     public function setNamespace(array $namespace): void
     {
@@ -164,8 +165,11 @@ class Loader
         // 遍历所有命名空间前缀
         foreach ($namespace as $prefix => $replace) {
             // 将类名转换为文件路径
-            $realClass = str_replace("\\", DIRECTORY_SEPARATOR,
-                str_replace($prefix, $replace, $raw)) . ".php";
+            $realClass = str_replace(
+                "\\",
+                DIRECTORY_SEPARATOR,
+                str_replace($prefix, $replace, $raw)
+            ) . ".php";
             $file = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . $realClass;
 
             // 如果文件存在，则加载并缓存

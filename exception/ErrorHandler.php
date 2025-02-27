@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -21,7 +22,7 @@ use Throwable;
 
 /**
  * 错误处理器类
- * 
+ *
  * 负责处理框架运行时的错误和异常：
  * - 注册全局错误和异常处理器
  * - 将 PHP 错误转换为异常
@@ -33,7 +34,7 @@ class ErrorHandler
 {
     /**
      * 注册错误处理器
-     * 
+     *
      * 将该类注册为全局的错误和异常处理器
      */
     public static function register(): void
@@ -44,40 +45,44 @@ class ErrorHandler
 
     /**
      * 处理应用异常
-     * 
+     *
      * 根据环境配置决定是否显示详细错误信息：
      * - 开发环境：显示详细的错误信息和调用栈
      * - 生产环境：显示友好的错误页面
-     * 
-     * @param Throwable $e 捕获的异常
+     *
+     * @param  Throwable        $e 捕获的异常
      * @throws AppExitException 当需要中断应用执行时
      */
     public static function appException(Throwable $e): void
     {
         Logger::error($e->getMessage());
         $context = Context::instance();
-        
+
         // Exit异常直接返回，不进行处理
         if ($e instanceof AppExitException) {
             return;
         }
 
         // 非调试模式或已经处理过错误时直接返回
-        if (!$context->isDebug()) return;
-        if ($context->get("hasCatchError", false)) return;
-        
+        if (!$context->isDebug()) {
+            return;
+        }
+        if ($context->get("hasCatchError", false)) {
+            return;
+        }
+
         // 标记已处理错误，避免递归
         $context->set("hasCatchError", true);
-        
+
         // 抛出带有错误响应的异常
         throw new AppExitException(self::getExceptionResponse($e));
     }
 
     /**
      * 生成异常响应
-     * 
-     * @param Throwable $e 需要处理的异常
-     * @return Response 包含错误信息的响应对象
+     *
+     * @param  Throwable $e 需要处理的异常
+     * @return Response  包含错误信息的响应对象
      */
     public static function getExceptionResponse(Throwable $e): Response
     {
@@ -87,16 +92,16 @@ class ErrorHandler
 
     /**
      * 自定义异常处理器
-     * 
+     *
      * 生成包含详细错误信息的HTML页面，包括：
      * - 错误类型和消息
      * - 文件位置和行号
      * - 调用栈信息
      * - 请求信息
      * - 服务器环境信息
-     * 
-     * @param Throwable $exception 需要处理的异常
-     * @return string 格式化的HTML错误页面
+     *
+     * @param  Throwable $exception 需要处理的异常
+     * @return string    格式化的HTML错误页面
      */
     private static function customExceptionHandler(Throwable $exception): string
     {
@@ -111,22 +116,21 @@ class ErrorHandler
             'args' => []
         ]);
 
-
         // 记录错误日志
         error_clear_last();
         Logger::error($exception->getMessage());
-        
+
         // 格式化调用栈
         $traces = sizeof($trace) === 0 ? debug_backtrace() : $trace;
         $trace_text = [];
         foreach ($traces as $i => $call) {
             $trace_text[$i] = sprintf(
-                "#%s %s(%s): %s%s%s", 
-                $i, 
-                $call['file'] ?? "", 
-                $call['line'] ?? "", 
-                $call["class"] ?? "", 
-                $call["type"] ?? "", 
+                "#%s %s(%s): %s%s%s",
+                $i,
+                $call['file'] ?? "",
+                $call['line'] ?? "",
+                $call["class"] ?? "",
+                $call["type"] ?? "",
                 $call['function'] ?? ""
             );
             Logger::error($trace_text[$i]);
@@ -176,7 +180,7 @@ class ErrorHandler
             }
 
             // 生成文件列表项
-            $TEMPLATE_LIST .= $first 
+            $TEMPLATE_LIST .= $first
                 ? "<li class=\"active\" data-file-key=\"{$key}\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>"
                 : "<li data-file-key=\"{$key}\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>";
             $first = false;
@@ -184,12 +188,12 @@ class ErrorHandler
             // 生成代码容器
             $TEMPLATE_CONTAINER .= "<div id=\"header{$key}\">";
             $TEMPLATE_CONTAINER .= "<div class=\"param-group\"><div class=\"param-item\">";
-            
+
             // 添加类名、类型和函数信息
             $clazz = $trace["class"] ?? "";
             $type = $trace["type"] ?? "";
             $function = $trace['function'] ?? "";
-            
+
             if (!empty($clazz)) {
                 $TEMPLATE_CONTAINER .= "<span class=\"highlight-class\">{$clazz}</span>";
             }
@@ -198,7 +202,7 @@ class ErrorHandler
             }
             if (!empty($function)) {
                 $TEMPLATE_CONTAINER .= "<span class=\"highlight-function\">{$function}(";
-                
+
                 // 添加函数参数
                 if (!empty($trace['args'])) {
                     foreach ($trace['args'] as $i => $arg) {
@@ -213,12 +217,12 @@ class ErrorHandler
                         $TEMPLATE_CONTAINER .= "<span class=\"highlight-args {$color}\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
                     }
                 }
-                
+
                 $TEMPLATE_CONTAINER .= ")</span>";
             }
-            
+
             $TEMPLATE_CONTAINER .= "</div></div></div>";
-            
+
             // 添加代码内容
             $TEMPLATE_CONTAINER .= "<div id=\"file{$key}\">";
             foreach ($sourceLine as $line) {
@@ -227,11 +231,9 @@ class ErrorHandler
             $TEMPLATE_CONTAINER .= "</div>";
         }
 
-
         // 替换模板变量
         $tpl = str_replace("{TEMPLATE_LIST}", $TEMPLATE_LIST, $tpl);
         $tpl = str_replace("{TEMPLATE_CONTENTS}", $TEMPLATE_CONTAINER, $tpl);
-
 
         // 添加请求信息
         $tpl = self::addRequestInfo($tpl);
@@ -241,8 +243,8 @@ class ErrorHandler
 
     /**
      * 添加请求相关信息到错误模板
-     * 
-     * @param string $tpl 错误模板
+     *
+     * @param  string $tpl 错误模板
      * @return string 更新后的模板
      */
     private static function addRequestInfo(string $tpl): string
@@ -251,12 +253,14 @@ class ErrorHandler
 
         // 基本请求信息
         $requestInfo = $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI'] . "<br>";
-        
+
         // 请求头信息
         $headers = $request->getHeaders();
         $REQUEST_HEADERS = "";
         foreach ($headers as $key => $value) {
-            if (empty($value)) continue;
+            if (empty($value)) {
+                continue;
+            }
             $requestInfo .= "$key: $value<br>";
             $REQUEST_HEADERS .= "<tr><td class=\"key\">$key</td><td class=\"value\">$value</td></tr>";
         }
@@ -299,16 +303,16 @@ class ErrorHandler
 
     /**
      * 获取错误文件的相关代码行
-     * 
-     * @param string $file 文件路径
-     * @param int $line 行号，-1表示使用关键字查找
-     * @param string $msg 关键字
-     * @return array 包含行号和代码行的数组
+     *
+     * @param  string $file 文件路径
+     * @param  int    $line 行号，-1表示使用关键字查找
+     * @param  string $msg  关键字
+     * @return array  包含行号和代码行的数组
      */
     public static function errorFile(string $file, int $line = -1, string $msg = ""): array
     {
         $lineCount = 15; // 上下文行数
-        
+
         if (!(file_exists($file) && is_file($file))) {
             return [];
         }
@@ -340,7 +344,7 @@ class ErrorHandler
         // 生成代码行HTML
         for ($i = $start; $i <= $end; $i++) {
             $number = '<span class="ln-num" data-num="' . $i . '"></span>';
-            
+
             if ($i == $line) {
                 $returns[] = "<span id='current'>" . $number . self::highlightCode($data[$i - 1]) . "</span>";
             } else {
@@ -353,8 +357,8 @@ class ErrorHandler
 
     /**
      * 代码高亮处理
-     * 
-     * @param string $code 需要高亮的代码
+     *
+     * @param  string $code 需要高亮的代码
      * @return string 高亮后的HTML
      */
     private static function highlightCode(string $code): string
@@ -368,8 +372,11 @@ class ErrorHandler
         if (preg_match('/<\?(php)?[^[:graph:]]/i', $code)) {
             $return = highlight_string($code, true);
         } else {
-            $return = preg_replace('/(&lt;\?php)+/i', "",
-                highlight_string("<?php " . $code, true));
+            $return = preg_replace(
+                '/(&lt;\?php)+/i',
+                "",
+                highlight_string("<?php " . $code, true)
+            );
         }
 
         // 还原注释标记
@@ -378,14 +385,14 @@ class ErrorHandler
 
     /**
      * 处理PHP错误
-     * 
+     *
      * 将PHP错误转换为异常，统一错误处理流程
-     * 
-     * @param int $errno 错误级别
-     * @param string $err_str 错误信息
-     * @param string $err_file 错误文件
-     * @param int $err_line 错误行号
-     * @return bool 是否处理了错误
+     *
+     * @param  int              $errno    错误级别
+     * @param  string           $err_str  错误信息
+     * @param  string           $err_file 错误文件
+     * @param  int              $err_line 错误行号
+     * @return bool             是否处理了错误
      * @throws AppExitException
      */
     public static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): bool

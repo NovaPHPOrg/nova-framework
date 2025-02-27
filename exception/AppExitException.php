@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -26,8 +27,8 @@ class AppExitException extends Exception
 
     /**
      * 构造函数
-     * @param mixed $response 需要返回的响应
-     * @param string $message 异常信息
+     * @param mixed  $response 需要返回的响应
+     * @param string $message  异常信息
      */
     public function __construct($response, $message = "App Exit")
     {
@@ -51,7 +52,7 @@ class AppExitException extends Exception
      * 获取调用此异常的上一个函数名
      * @return string|null 返回函数名，如果无法获取则返回null
      */
-    function getPreviousFunction(): ?string
+    public function getPreviousFunction(): ?string
     {
         $backtrace = debug_backtrace();
         return $backtrace[2]['function'] ?? null;

@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -10,7 +11,6 @@
 declare(strict_types=1);
 
 namespace nova\framework\route;
-
 
 use nova\framework\core\Logger;
 use nova\framework\exception\AppExitException;
@@ -26,23 +26,23 @@ class RouteObject
 {
     /** @var string 模块名称 */
     public string $module;
-    
+
     /** @var string 控制器名称 */
     public string $controller;
-    
+
     /** @var string 动作方法名称 */
     public string $action;
-    
+
     /** @var array 路由参数数组 */
     public array $params;
 
     /**
      * 构造函数
-     * 
-     * @param string $module 模块名称
+     *
+     * @param string $module     模块名称
      * @param string $controller 控制器名称
-     * @param string $action 动作方法名称
-     * @param array $params 路由参数
+     * @param string $action     动作方法名称
+     * @param array  $params     路由参数
      */
     public function __construct(string $module = "", string $controller = "", string $action = "", array $params = [])
     {
@@ -55,22 +55,24 @@ class RouteObject
     /**
      * 更新路由参数
      * 支持使用占位符更新模块、控制器、动作名称，以及添加新的参数
-     * 
+     *
      * @param array $params 要更新的参数数组
      */
     public function updateParams(array $params): void
     {
         $vars = get_object_vars($this);
         foreach ($params as $key => $value) {
-            if(!is_string($key))continue;
-          foreach ($vars as $var => $val) {
-              if("{{$key}}" == $val){
-                  $this->$var = $value;
-              }
-          }
-          if ($key != "module" && $key != "controller" && $key != "action"){
-              $this->params[$key] = $value;
-          }
+            if (!is_string($key)) {
+                continue;
+            }
+            foreach ($vars as $var => $val) {
+                if ("{{$key}}" == $val) {
+                    $this->$var = $value;
+                }
+            }
+            if ($key != "module" && $key != "controller" && $key != "action") {
+                $this->params[$key] = $value;
+            }
         }
     }
 
@@ -78,7 +80,7 @@ class RouteObject
      * 检查路由配置的有效性
      * 验证控制器类是否存在、是否继承自基础控制器类
      * 验证动作方法是否存在、返回类型是否正确、参数数量是否匹配
-     * 
+     *
      * @throws ControllerException 当控制器或动作方法配置无效时抛出异常
      */
     public function checkSelf(): void
@@ -88,7 +90,7 @@ class RouteObject
 
         // 检查控制器是否存在且继承自Controller
         if (!class_exists($controllerClazz)) {
-           throw new ControllerException("Controller not found: $controllerClazz", $this);
+            throw new ControllerException("Controller not found: $controllerClazz", $this);
         }
         if (!is_subclass_of($controllerClazz, Controller::class)) {
             throw new ControllerException("Controller must extends Controller: $controllerClazz", $this);
@@ -114,7 +116,6 @@ class RouteObject
                 }
             }
 
-
             $paramCountReceived = count($this->params);
             $totalParamCount = count($parameters);
 
@@ -136,7 +137,7 @@ class RouteObject
     /**
      * 将路由对象转换为字符串
      * 格式为：模块/控制器/动作
-     * 
+     *
      * @return string 路由字符串表示
      */
     public function __toString(): string
@@ -152,17 +153,16 @@ class RouteObject
      */
     public function run(): void
     {
-        $controllerName = ucfirst( $this->controller);
+        $controllerName = ucfirst($this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
         $controller = new $controllerClazz();
         $init = $controller->init();
         Logger::debug("Route Method: $controllerClazz::{$this->action}");
-        if ($init instanceof Response){
+        if ($init instanceof Response) {
             throw new AppExitException($init);
         }
         $response = $controller->{$this->action}(...$this->params);
         throw new AppExitException($response);
     }
-
 
 }

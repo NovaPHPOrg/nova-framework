@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -34,7 +35,7 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 生成缓存键的文件路径
-     * @param string $key 原始缓存键
+     * @param  string $key 原始缓存键
      * @return string 处理后的文件路径
      */
     private function getKey(string $key): string
@@ -45,7 +46,7 @@ class FileCacheDriver implements iCacheDriver
             $keys = ["default", $keys[0]];
         }
 
-        $keys = array_map(fn($key) => substr(md5($key), 8, 6), $keys);
+        $keys = array_map(fn ($key) => substr(md5($key), 8, 6), $keys);
 
         $subDir = join(DIRECTORY_SEPARATOR, $keys);
         return $subDir . ".cache";
@@ -53,7 +54,7 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 获取完整的缓存文件路径
-     * @param string $key 缓存键
+     * @param  string $key 缓存键
      * @return string 完整的文件系统路径
      */
     private function getFilePath(string $key): string
@@ -63,7 +64,7 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 从文件中读取缓存数据
-     * @param string $file 文件路径
+     * @param  string     $file 文件路径
      * @return array|null 读取的数据，失败返回null
      */
     private function readFromFile(string $file): ?array
@@ -88,7 +89,7 @@ class FileCacheDriver implements iCacheDriver
                 // 读取并反序列化数据
                 $content = fread($fp, max(1, filesize($file)));
                 $data = @unserialize($content);
-                
+
                 return is_array($data) ? $data : null;
             } finally {
                 // 确保释放文件锁和关闭文件句柄
@@ -102,9 +103,9 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 将数据写入缓存文件
-     * @param string $file 文件路径
-     * @param array $data 要写入的数据
-     * @return void 写入是否成功
+     * @param  string $file 文件路径
+     * @param  array  $data 要写入的数据
+     * @return void   写入是否成功
      */
     private function writeToFile(string $file, array $data): void
     {
@@ -142,9 +143,9 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 获取缓存值
-     * @param string $key 缓存键
-     * @param mixed $default 默认值
-     * @return mixed 缓存值或默认值
+     * @param  string $key     缓存键
+     * @param  mixed  $default 默认值
+     * @return mixed  缓存值或默认值
      */
     public function get($key, $default = null): mixed
     {
@@ -162,9 +163,9 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 设置缓存值
-     * @param string $key 缓存键
-     * @param mixed $value 缓存值
-     * @param int $expire 过期时间（秒）
+     * @param string $key    缓存键
+     * @param mixed  $value  缓存值
+     * @param int    $expire 过期时间（秒）
      */
     public function set($key, $value, $expire): void
     {
@@ -231,8 +232,8 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 获取缓存项的剩余生存时间（TTL）
-     * @param string $key 缓存键
-     * @return int 剩余秒数，0表示永不过期，-1表示已过期或不存在
+     * @param  string $key 缓存键
+     * @return int    剩余秒数，0表示永不过期，-1表示已过期或不存在
      */
     public function getTtl($key): int
     {

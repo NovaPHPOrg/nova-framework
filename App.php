@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
@@ -45,7 +46,7 @@ class App extends NovaApp
      * 获取App实例
      * 如果存在自定义的Application类并实现了App接口，则返回自定义Application实例
      * 否则返回默认App实例
-     * 
+     *
      * @return App 返回应用程序实例
      */
     public static function getInstance(): App
@@ -68,7 +69,7 @@ class App extends NovaApp
      * 4. 异常处理
      * 5. 应用程序终止
      */
-    function start(): void
+    public function start(): void
     {
         try {
             $this->initializeFramework();
@@ -114,7 +115,7 @@ class App extends NovaApp
      * 处理请求
      * 设置路由信息到请求对象中，触发应用启动事件，并执行路由
      *
-     * @param RouteObject $route 路由对象
+     * @param  RouteObject      $route 路由对象
      * @throws AppExitException
      */
     private function processRequest(RouteObject $route): void
@@ -129,7 +130,7 @@ class App extends NovaApp
     /**
      * 发送响应
      * 将响应发送给客户端，并记录相关日志
-     * 
+     *
      * @param Response|null $response 响应对象
      */
     private function sendResponse(?Response $response): void
@@ -173,7 +174,7 @@ class App extends NovaApp
         if (!$response) {
             $response = $this->createErrorResponse(404, $exception);
         }
-        
+
         $this->sendResponse($response);
     }
 
@@ -186,14 +187,14 @@ class App extends NovaApp
             'message' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString()
         ]);
-        
+
         $response = $this->onApplicationError($_SERVER['REQUEST_URI']);
         EventManager::trigger("app.error");
 
         if (!$response) {
             $response = $this->createErrorResponse(500, $exception);
         }
-        
+
         $this->sendResponse($response);
     }
 
@@ -202,8 +203,8 @@ class App extends NovaApp
      * 根据是否处于调试模式返回不同的错误响应：
      * - 调试模式：返回详细的异常信息
      * - 生产模式：返回配置的错误页面
-     * 
-     * @param int $statusCode HTTP状态码
+     *
+     * @param  int      $statusCode HTTP状态码
      * @return Response 错误响应对象
      */
     private function createErrorResponse(int $statusCode, Throwable $exception): Response
@@ -227,7 +228,7 @@ class App extends NovaApp
     {
         $this->onFrameworkEnd();
         EventManager::trigger("framework.end", $this);
-        
+
         $executionTime = runtime("App Session");
         if ($executionTime > self::PERFORMANCE_THRESHOLD) {
             Logger::warning("Performance warning", [
@@ -236,7 +237,7 @@ class App extends NovaApp
                 'message' => "App execution exceeded recommended time"
             ]);
         }
-        
+
         Logger::info("App end");
         Response::finish();
     }
@@ -265,9 +266,9 @@ class App extends NovaApp
 
     /**
      * 路由未找到时的钩子方法
-     * @param RouteObject|null $route 路由对象
-     * @param string $uri 请求URI
-     * @return Response|null 自定义的错误响应
+     * @param  RouteObject|null $route 路由对象
+     * @param  string           $uri   请求URI
+     * @return Response|null    自定义的错误响应
      */
     protected function onRouteNotFound(?RouteObject $route, string $uri): ?Response
     {
@@ -290,14 +291,13 @@ class App extends NovaApp
 
     /**
      * 应用发生错误时的钩子方法
-     * @param string $uri 请求URI
+     * @param  string        $uri 请求URI
      * @return Response|null 自定义的错误响应
      */
     protected function onApplicationError(string $uri): ?Response
     {
         return null;
     }
-
 
     private function printException(\Exception $e): void
     {
