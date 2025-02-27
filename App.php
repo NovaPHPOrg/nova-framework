@@ -244,14 +244,14 @@ class App extends NovaApp
      * 路由解析完成时的钩子方法
      * @param RouteObject|null $route 路由对象
      */
-    private function onRoute(?RouteObject $route)
+    protected function onRoute(?RouteObject $route)
     {
     }
 
     /**
      * 应用启动时的钩子方法
      */
-    private function onAppStart()
+    protected function onAppStart()
     {
     }
 
@@ -261,7 +261,7 @@ class App extends NovaApp
      * @param string $uri 请求URI
      * @return Response|null 自定义的错误响应
      */
-    private function onRouteNotFound(?RouteObject $route, string $uri): ?Response
+    protected function onRouteNotFound(?RouteObject $route, string $uri): ?Response
     {
         return null;
     }
@@ -269,14 +269,14 @@ class App extends NovaApp
     /**
      * 框架结束时的钩子方法
      */
-    private function onFrameworkEnd()
+    protected function onFrameworkEnd()
     {
     }
 
     /**
      * 应用结束时的钩子方法
      */
-    private function onAppEnd()
+    protected function onAppEnd()
     {
     }
 
@@ -285,7 +285,7 @@ class App extends NovaApp
      * @param string $uri 请求URI
      * @return Response|null 自定义的错误响应
      */
-    private function onApplicationError(string $uri): ?Response
+    protected function onApplicationError(string $uri): ?Response
     {
         return null;
     }
