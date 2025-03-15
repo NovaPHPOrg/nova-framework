@@ -229,7 +229,12 @@ class Request
      */
     public function getClientIP(): string
     {
-        return $_SERVER["REMOTE_ADDR"];
+        $ip = $_SERVER["REMOTE_ADDR"];
+        // 移除可能存在的端口号
+        if (str_contains($ip, ':')) {
+            $ip = strstr($ip, ':', true);
+        }
+        return $ip;
     }
 
     /**
