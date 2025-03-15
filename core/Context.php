@@ -296,7 +296,7 @@ class Context
         foreach ($this->instances as &$instance) {
             $instance = null;
         }
-        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES = $_SESSION = null;
+        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES =  [];
     }
     /**
      * 析构函数

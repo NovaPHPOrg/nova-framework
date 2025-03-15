@@ -59,7 +59,7 @@ class Text
     {
         // 处理特殊情况
         if ($data === null || $sample === null) {
-            return null;
+            return $data;
         }
         if (is_array($data)) {
             return $data;
