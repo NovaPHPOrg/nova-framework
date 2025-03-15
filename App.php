@@ -239,7 +239,7 @@ class App extends NovaApp
         }
 
         Logger::info("App end");
-        Response::finish();
+        // Response::finish();
     }
 
     /**
@@ -299,7 +299,7 @@ class App extends NovaApp
         return null;
     }
 
-    private function printException(\Exception $e): void
+    private function printException(\Exception|\Error $e): void
     {
         if ($this->context->isDebug()) {
             echo "<pre>";

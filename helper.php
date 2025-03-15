@@ -131,6 +131,17 @@ function config(string $key = null, mixed $set = null): mixed
     return $context->config()->all();
 }
 
+function isCli(): bool
+{
+    return PHP_SAPI === 'cli' && !isWorkerman();
+
+}
+
+function isWorkerman(): bool
+{
+    return class_exists('Workerman\Worker', false);
+}
+
 /**
  * 调试变量输出
  * 在CLI模式下直接输出到控制台
@@ -150,10 +161,7 @@ function dump(...$args): void
     $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
     $line = sprintf("%s:%d\n", $trace['file'], $trace['line']);
 
-    // 判断运行模式
-    $isCli = PHP_SAPI === 'cli';
-
-    if ($isCli) {
+    if (isCli()) {
         // CLI模式输出
         echo "\n";
         echo "\033[33m" . str_repeat('-', 80) . "\033[0m\n"; // 黄色分隔线
@@ -230,13 +238,4 @@ EOF;
         Response::asHtml($tpl),
         "Dump variables"
     );
-}
-
-/**
- * 判断当前是否为CLI模式运行
- * @return bool 如果是CLI模式返回true，否则返回false
- */
-function isCli(): bool
-{
-    return (bool)preg_match("/cli/i", php_sapi_name());
 }

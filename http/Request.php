@@ -206,19 +206,18 @@ class Request
 
     /**
      * 获取服务器IP地址
-     * @param  Context $context 上下文对象
-     * @return string  返回服务器IP地址
+     * @return string 返回服务器IP地址
      */
-    public function getServerIp(Context $context): string
+    public function getServerIp(): string
     {
-        $ip = $context->config()->get('ip');
+        $ip = Context::instance()->config()->get('server_ip');
         if (!empty($ip)) {
             return $ip;
         }
 
         $data = gethostbyname($_SERVER["SERVER_NAME"]);
         if ($data !== $_SERVER["SERVER_NAME"]) {
-            $context->config()->set('ip', $data);
+            Context::instance()->config()->set('server_ip', $data);
             return $data;
         }
         return $data;

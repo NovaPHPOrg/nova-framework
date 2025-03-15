@@ -55,7 +55,6 @@ class ErrorHandler
      */
     public static function appException(Throwable $e): void
     {
-        Logger::error($e->getMessage());
         $context = Context::instance();
 
         // Exit异常直接返回，不进行处理
@@ -118,23 +117,10 @@ class ErrorHandler
 
         // 记录错误日志
         error_clear_last();
-        Logger::error($exception->getMessage());
+        Logger::emergency($exception->getMessage());
 
         // 格式化调用栈
         $traces = sizeof($trace) === 0 ? debug_backtrace() : $trace;
-        $trace_text = [];
-        foreach ($traces as $i => $call) {
-            $trace_text[$i] = sprintf(
-                "#%s %s(%s): %s%s%s",
-                $i,
-                $call['file'] ?? "",
-                $call['line'] ?? "",
-                $call["class"] ?? "",
-                $call["type"] ?? "",
-                $call['function'] ?? ""
-            );
-            Logger::error($trace_text[$i]);
-        }
 
         // 加载错误模板
         $tpl = file_get_contents(ROOT_PATH . "/nova/framework/error/exception.html");
@@ -209,8 +195,8 @@ class ErrorHandler
                         $color = ($i % 2 == 0) ? "highlight-args1" : "highlight-args2";
                         $argStr = htmlspecialchars(print_r($arg, true), ENT_QUOTES);
                         // 限制参数显示长度为最多200个UTF-8字符
-                        if (mb_strlen($argStr, 'UTF-8') > 200) {
-                            $argStr = mb_substr($argStr, 0, 197, 'UTF-8') . '...';
+                        if (\mb_strlen($argStr, 'UTF-8') > 200) {
+                            $argStr = \mb_substr($argStr, 0, 197, 'UTF-8') . '...';
                         }
 
                         $argStr = str_replace("\n", "<br>", $argStr);

@@ -30,9 +30,9 @@ class Text
      */
     public static function convert($text, string $encode_code = "UTF-8"): string
     {
-        $encode = mb_detect_encoding($text, mb_detect_order());
+        $encode = \mb_detect_encoding($text, \mb_detect_order());
         if ($encode !== $encode_code) {
-            $text = mb_convert_encoding($text, $encode_code, $encode);
+            $text = \mb_convert_encoding($text, $encode_code, $encode);
         }
         return $text;
     }

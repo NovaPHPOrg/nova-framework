@@ -93,6 +93,9 @@ class Logger extends NovaApp
         $this->tempFile = $this->logDir . DIRECTORY_SEPARATOR . $this->context->getSessionId() . '.log';
 
         $this->initialize();
+        if ($this->debug){
+            $this->bufferSize = 1;
+        }
     }
 
     /**
@@ -143,6 +146,38 @@ class Logger extends NovaApp
             return;
         }
 
+        // 对于错误级别的日志，自动添加堆栈跟踪和调试信息
+        if (in_array($level, ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'])) {
+            if (!isset($context['stack_trace'])) {
+                $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT | DEBUG_BACKTRACE_IGNORE_ARGS);
+                // 移除最上层的Logger相关调用
+                array_shift($trace);
+                array_shift($trace);
+
+                $context['stack_trace'] = $this->formatStackTrace($trace);
+                $context['debug_info'] = [
+                    'memory_usage' => memory_get_usage(true),
+                    'peak_memory' => memory_get_peak_usage(true),
+                    'php_version' => PHP_VERSION,
+                    'server_time' => date('Y-m-d H:i:s'),
+                    'request_uri' => $_SERVER['REQUEST_URI'] ?? 'CLI',
+                    'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+                ];
+
+                if ($message instanceof \Throwable) {
+                    $context['exception'] = [
+                        'class' => get_class($message),
+                        'code' => $message->getCode(),
+                        'file' => $message->getFile(),
+                        'line' => $message->getLine(),
+                        'message' => $message->getMessage(),
+                        'trace' => $message->getTraceAsString()
+                    ];
+                    $message = $message->getMessage();
+                }
+            }
+        }
+
         // 获取调用信息
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
         $caller = $trace[1];
@@ -181,18 +216,88 @@ class Logger extends NovaApp
         $milliseconds = sprintf("%03d", ($timestamp - floor($timestamp)) * 1000);
 
         $messageStr = is_string($message) ? $message : json_encode($message, JSON_UNESCAPED_UNICODE);
-        $contextStr = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
 
-        return sprintf(
-            "[%s.%s] [%s] [%s:%d] %s%s\n",
+        // 基础日志信息
+        $log = sprintf(
+            "[%s.%s] [%s] [%s:%d] %s\n",
             $datetime,
             $milliseconds,
             str_pad($level, 9),
             basename($caller['file']),
             $caller['line'],
-            $messageStr,
-            $contextStr
+            $messageStr
         );
+
+        // 如果有上下文信息，分类型添加
+        if (!empty($context)) {
+            // 如果是错误级别的日志，优化显示格式
+            if (isset($context['stack_trace']) || isset($context['debug_info']) || isset($context['exception'])) {
+                if (isset($context['exception'])) {
+                    $log .= "Exception Info:\n";
+                    $log .= "  Class:   " . $context['exception']['class'] . "\n";
+                    $log .= "  Code:    " . $context['exception']['code'] . "\n";
+                    $log .= "  File:    " . $context['exception']['file'] . "\n";
+                    $log .= "  Line:    " . $context['exception']['line'] . "\n";
+                    $log .= "  Message: " . $context['exception']['message'] . "\n";
+                    $log .= "  Stack Trace:\n";
+                    foreach (explode("\n", $context['exception']['trace']) as $traceLine) {
+                        $log .= "    " . $traceLine . "\n";
+                    }
+                }
+
+                if (isset($context['stack_trace'])) {
+                    $log .= "Call Stack:\n";
+                    foreach ($context['stack_trace'] as $trace) {
+                        $log .= sprintf(
+                            "  %s%s%s() at %s:%d\n",
+                            $trace['class'],
+                            $trace['type'],
+                            $trace['function'],
+                            $trace['file'],
+                            $trace['line']
+                        );
+                    }
+                }
+
+                if (isset($context['debug_info'])) {
+                    $log .= "Debug Info:\n";
+                    $log .= "  Memory Usage:    " . $this->formatBytes($context['debug_info']['memory_usage']) . "\n";
+                    $log .= "  Peak Memory:     " . $this->formatBytes($context['debug_info']['peak_memory']) . "\n";
+                    $log .= "  PHP Version:     " . $context['debug_info']['php_version'] . "\n";
+                    $log .= "  Server Time:     " . $context['debug_info']['server_time'] . "\n";
+                    $log .= "  Request URI:     " . $context['debug_info']['request_uri'] . "\n";
+                    $log .= "  Request Method:  " . $context['debug_info']['request_method'] . "\n";
+                }
+
+                // 移除已处理的特殊字段
+                unset($context['stack_trace'], $context['debug_info'], $context['exception']);
+            }
+
+            // 添加其他上下文信息（如果有）
+            if (!empty($context)) {
+                $log .= "Additional Context:\n";
+                $log .= "  " . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+            }
+        }
+
+        $log .= str_repeat('-', 80) . "\n"; // 添加分隔线
+        return $log;
+    }
+
+    /**
+     * 格式化字节大小为人类可读格式
+     *
+     * @param  int    $bytes 字节数
+     * @return string 格式化后的大小
+     */
+    private function formatBytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, 2) . ' ' . $units[$pow];
     }
 
     /**
@@ -240,6 +345,27 @@ class Logger extends NovaApp
         }
 
         rename($this->logFile, "{$this->logFile}.1");
+    }
+
+    /**
+     * 格式化堆栈跟踪信息
+     *
+     * @param  array $trace debug_backtrace()的结果
+     * @return array 格式化后的堆栈信息
+     */
+    private function formatStackTrace(array $trace): array
+    {
+        $stackTrace = [];
+        foreach ($trace as $i => $t) {
+            $stackTrace[] = [
+                'file' => $t['file'] ?? 'unknown',
+                'line' => $t['line'] ?? 0,
+                'function' => $t['function'] ?? '',
+                'class' => $t['class'] ?? '',
+                'type' => $t['type'] ?? '',
+            ];
+        }
+        return $stackTrace;
     }
 
     /**

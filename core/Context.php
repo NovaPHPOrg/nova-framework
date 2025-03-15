@@ -102,7 +102,7 @@ class Context
     {
         global $context;
         if (!$context) {
-            throw new RuntimeException('Context is not initialized');
+            $context = new Context(new Loader());
         }
         return $context;
     }

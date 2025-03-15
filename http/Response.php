@@ -494,18 +494,6 @@ class Response extends NovaApp
     }
 
     /**
-     * 完成请求处理
-     * 用于在发送响应后执行清理工作
-     */
-    public static function finish(): void
-    {
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
-        flush();
-    }
-
-    /**
      * 发送静态文件响应
      * 支持缓存控制和条件请求
      */
