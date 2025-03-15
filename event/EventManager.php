@@ -59,7 +59,7 @@ class EventManager
      */
     public static function register(): void
     {
-        $events = config("framework.start");
+        $events = config("framework_start");
         if (!is_array($events)) {
             Logger::warning("Framework start events configuration is not an array");
             return;
