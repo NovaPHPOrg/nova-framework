@@ -93,7 +93,7 @@ class Logger extends NovaApp
         $this->tempFile = $this->logDir . DIRECTORY_SEPARATOR . $this->context->getSessionId() . '.log';
 
         $this->initialize();
-        if ($this->debug){
+        if ($this->debug) {
             $this->bufferSize = 1;
         }
     }
