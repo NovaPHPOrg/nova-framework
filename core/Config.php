@@ -41,11 +41,6 @@ class Config
      */
     protected array $config = [];
 
-    /**
-     * @var string 配置数据的哈希值
-     *             用于跟踪配置是否发生变化，仅在配置变更时才写入文件
-     */
-    private string $hash = '';
 
     /**
      * 构造函数
@@ -57,8 +52,8 @@ class Config
     {
         $this->configPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "config.php";
         $this->loadConfig();
-        $this->hash = $this->hash($this->config);
     }
+
 
     /**
      * 加载配置文件
@@ -69,7 +64,13 @@ class Config
     private function loadConfig(): void
     {
         if (file_exists($this->configPath)) {
-            $this->config = require $this->configPath;
+            if(class_exists('Workerman\Worker', false)){
+                $contents = file_get_contents($this->configPath);
+                $this->config = eval('?>'.$contents);
+            }else{
+                $this->config = require $this->configPath;
+            }
+
         } else {
             $exampleConfigPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
             if (!file_exists($exampleConfigPath)) {
@@ -139,6 +140,7 @@ class Config
         }
 
         $config = $value;
+        $this->saveConfig();
     }
 
     /**
@@ -197,7 +199,7 @@ class Config
      */
     public function __destruct()
     {
-        $this->saveConfig();
+
     }
 
     /**
@@ -209,26 +211,12 @@ class Config
      */
     private function saveConfig(): void
     {
-        if ($this->hash($this->config) === $this->hash) {
-            return;
-        }
         $content = "<?php\nreturn " . var_export($this->config, true) . ";";
         if (file_put_contents($this->configPath, $content) === false) {
             throw new RuntimeException("无法保存配置文件：{$this->configPath}");
         }
     }
 
-    /**
-     * 计算配置数组的哈希值
-     * 用于检测配置是否发生变化
-     *
-     * @param  array<string, mixed> $config 要计算哈希值的配置数组
-     * @return string               返回配置数组的MD5哈希值
-     */
-    private function hash(array $config): string
-    {
-        return md5(serialize($config));
-    }
 
     /**
      * 获取完整的配置数组
