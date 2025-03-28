@@ -198,6 +198,8 @@ class Route extends NovaApp
             throw new ControllerException("Route not found: " . $this->uri);
         }
 
+        Logger::debug("Route object: $this->uri ->  $routeObj");
+
         return $routeObj;
     }
 
