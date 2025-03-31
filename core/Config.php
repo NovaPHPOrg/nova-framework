@@ -41,7 +41,6 @@ class Config
      */
     protected array $config = [];
 
-
     /**
      * 构造函数
      * 初始化配置文件路径，加载配置文件内容，并计算初始哈希值
@@ -54,7 +53,6 @@ class Config
         $this->loadConfig();
     }
 
-
     /**
      * 加载配置文件
      * 首先尝试加载config.php，如果不存在则尝试加载example.config.php
@@ -64,10 +62,10 @@ class Config
     private function loadConfig(): void
     {
         if (file_exists($this->configPath)) {
-            if(class_exists('Workerman\Worker', false)){
+            if (class_exists('Workerman\Worker', false)) {
                 $contents = file_get_contents($this->configPath);
                 $this->config = eval('?>'.$contents);
-            }else{
+            } else {
                 $this->config = require $this->configPath;
             }
 
@@ -216,7 +214,6 @@ class Config
             throw new RuntimeException("无法保存配置文件：{$this->configPath}");
         }
     }
-
 
     /**
      * 获取完整的配置数组

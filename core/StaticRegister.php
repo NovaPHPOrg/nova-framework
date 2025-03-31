@@ -1,8 +1,8 @@
 <?php
+
 declare(strict_types=1);
 
 namespace nova\framework\core;
-
 
 use RuntimeException;
 
@@ -20,7 +20,8 @@ abstract class StaticRegister
     }
 
     // 子类必须实现的方法
-    public static function registerInfo(): void{
+    public static function registerInfo(): void
+    {
         throw new RuntimeException("子类必须重写registerInfo方法");
     }
 }
