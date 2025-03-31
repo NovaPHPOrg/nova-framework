@@ -268,3 +268,17 @@ function throttle(string $key, int $ttl, callable $callback): mixed
 
     return $result;
 }
+
+
+function uuid(): string
+{
+    $data = random_bytes(16);
+
+    // 设置版本号（4）：xxxx -> 0100xxxx
+    $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+    // 设置变体（10xxxxxx）
+    $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+
+    // 转成格式化字符串
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
