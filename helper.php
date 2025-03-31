@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework;
 
+use nova\framework\cache\Cache;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\core\VarDump;
@@ -238,4 +239,32 @@ EOF;
         Response::asHtml($tpl),
         "Dump variables"
     );
+}
+
+/**
+ * 通用节流函数，多少秒内只允许执行一次 callback
+ *
+ * @param  string     $key      唯一限流标识（如用户IP、接口名等）
+ * @param  int        $ttl      间隔秒数，比如10秒只允许执行一次
+ * @param  callable   $callback 成功通过限流时要执行的逻辑
+ * @return mixed|null 返回 callback 的结果 或 null（被限流）
+ */
+function throttle(string $key, int $ttl, callable $callback): mixed
+{
+    $cacheKey = 'throttle_' . md5($key);
+
+    $cache = Context::instance()->cache;
+
+    // 使用 PSR-16 兼容的 Cache，如果你自己封装了 Cache 类，请替换这里
+    if ($cache->get($cacheKey)) {
+        return null; // 表示被限流了
+    }
+
+    // 放行，执行回调
+    $result = $callback();
+
+    // 设置限流标识，$ttl 秒内不能再进
+    $cache->set($cacheKey, true, $ttl);
+
+    return $result;
 }

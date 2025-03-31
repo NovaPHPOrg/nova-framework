@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework\core;
 
+use nova\framework\cache\Cache;
 use nova\framework\http\Request;
 use nova\framework\http\Response;
 use RuntimeException;
@@ -90,6 +91,7 @@ class Context
      *                           用于在整个应用生命周期中存储临时数据
      */
     protected array $vars = [];
+    public Cache $cache; //缓存类
 
     /**
      * 获取Context单例实例
@@ -125,6 +127,8 @@ class Context
         $this->initRequest();
         // 初始化加载器
         $this->initLoader($loader);
+
+        $this->cache = new Cache();
     }
 
     /**
@@ -341,4 +345,5 @@ class Context
     {
         return $this->get('response.class', Response::class);
     }
+
 }
