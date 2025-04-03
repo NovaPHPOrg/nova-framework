@@ -128,6 +128,12 @@ class Context
         // 初始化加载器
         $this->initLoader($loader);
 
+
+    }
+
+
+    public function init()
+    {
         $this->cache = new Cache();
     }
 

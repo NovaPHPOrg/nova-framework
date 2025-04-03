@@ -40,6 +40,8 @@ $context = new Context($loader);
 // 加载助手函数
 include_once "helper.php";
 
+$context->init();
+
 // 获取应用程序实例并启动
 App::getInstance()->start();
 
