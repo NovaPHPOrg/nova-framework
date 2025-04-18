@@ -91,6 +91,12 @@ class Route extends NovaApp
         return $this;
     }
 
+    public function getOrPost(string $uri, RouteObject $mapper):self
+    {
+        $this->get($uri, $mapper)->post($uri, $mapper);
+        return $this;
+    }
+
     /**
      * 注册 PATCH 请求路由
      * 通常用于部分更新资源
@@ -246,6 +252,8 @@ class Route extends NovaApp
     {
         return $this->uri;
     }
+
+
 
     /**
      * 获取所有注册的路由
