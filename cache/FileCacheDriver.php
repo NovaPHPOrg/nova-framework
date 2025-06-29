@@ -172,7 +172,9 @@ class FileCacheDriver implements iCacheDriver
         $file = $this->getFilePath($key);
         $subDir = dirname($file);
         if (!is_dir($subDir)) {
-            mkdir($subDir, 0777, true);
+           try{
+               mkdir($subDir, 0777, true);
+           }catch(\Exception $e){}
         }
 
         $this->writeToFile($file, [
