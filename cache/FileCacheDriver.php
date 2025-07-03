@@ -34,8 +34,38 @@ class FileCacheDriver implements iCacheDriver
     }
 
     /**
+     * 获取缓存值
+     * @param string $key 缓存键
+     * @param mixed $default 默认值
+     * @return mixed  缓存值或默认值
+     */
+    public function get($key, $default = null): mixed
+    {
+        $file = $this->getFilePath($key);
+
+        $data = $this->readFromFile($file);
+        if (is_array($data) && isset($data['expire']) && isset($data['data'])) {
+            if ($data['expire'] == 0 || $data['expire'] > time()) {
+                return $data['data'];
+            }
+            unlink($file); // 文件过期时删除
+        }
+        return $default;
+    }
+
+    /**
+     * 获取完整的缓存文件路径
+     * @param string $key 缓存键
+     * @return string 完整的文件系统路径
+     */
+    private function getFilePath(string $key): string
+    {
+        return $this->baseDir . $this->getKey($key);
+    }
+
+    /**
      * 生成缓存键的文件路径
-     * @param  string $key 原始缓存键
+     * @param string $key 原始缓存键
      * @return string 处理后的文件路径
      */
     private function getKey(string $key): string
@@ -46,25 +76,15 @@ class FileCacheDriver implements iCacheDriver
             $keys = ["default", $keys[0]];
         }
 
-        $keys = array_map(fn ($key) => substr(md5($key), 8, 6), $keys);
+        $keys = array_map(fn($key) => substr(md5($key), 8, 6), $keys);
 
         $subDir = join(DIRECTORY_SEPARATOR, $keys);
         return $subDir . ".cache";
     }
 
     /**
-     * 获取完整的缓存文件路径
-     * @param  string $key 缓存键
-     * @return string 完整的文件系统路径
-     */
-    private function getFilePath(string $key): string
-    {
-        return $this->baseDir . $this->getKey($key);
-    }
-
-    /**
      * 从文件中读取缓存数据
-     * @param  string     $file 文件路径
+     * @param string $file 文件路径
      * @return array|null 读取的数据，失败返回null
      */
     private function readFromFile(string $file): ?array
@@ -102,9 +122,32 @@ class FileCacheDriver implements iCacheDriver
     }
 
     /**
+     * 设置缓存值
+     * @param string $key 缓存键
+     * @param mixed $value 缓存值
+     * @param int $expire 过期时间（秒）
+     */
+    public function set($key, $value, $expire): void
+    {
+        $file = $this->getFilePath($key);
+        $subDir = dirname($file);
+        if (!is_dir($subDir)) {
+            try {
+                mkdir($subDir, 0777, true);
+            } catch (\Exception $e) {
+            }
+        }
+
+        $this->writeToFile($file, [
+            'expire' => $expire == 0 ? 0 : time() + $expire,
+            'data' => $value
+        ]);
+    }
+
+    /**
      * 将数据写入缓存文件
-     * @param  string $file 文件路径
-     * @param  array  $data 要写入的数据
+     * @param string $file 文件路径
+     * @param array $data 要写入的数据
      * @return void   写入是否成功
      */
     private function writeToFile(string $file, array $data): void
@@ -139,48 +182,6 @@ class FileCacheDriver implements iCacheDriver
         } catch (\Exception $e) {
             return;
         }
-    }
-
-    /**
-     * 获取缓存值
-     * @param  string $key     缓存键
-     * @param  mixed  $default 默认值
-     * @return mixed  缓存值或默认值
-     */
-    public function get($key, $default = null): mixed
-    {
-        $file = $this->getFilePath($key);
-
-        $data = $this->readFromFile($file);
-        if (is_array($data) && isset($data['expire']) && isset($data['data'])) {
-            if ($data['expire'] == 0 || $data['expire'] > time()) {
-                return $data['data'];
-            }
-            unlink($file); // 文件过期时删除
-        }
-        return $default;
-    }
-
-    /**
-     * 设置缓存值
-     * @param string $key    缓存键
-     * @param mixed  $value  缓存值
-     * @param int    $expire 过期时间（秒）
-     */
-    public function set($key, $value, $expire): void
-    {
-        $file = $this->getFilePath($key);
-        $subDir = dirname($file);
-        if (!is_dir($subDir)) {
-           try{
-               mkdir($subDir, 0777, true);
-           }catch(\Exception $e){}
-        }
-
-        $this->writeToFile($file, [
-            'expire' => $expire == 0 ? 0 : time() + $expire,
-            'data' => $value
-        ]);
     }
 
     /**
@@ -234,7 +235,7 @@ class FileCacheDriver implements iCacheDriver
 
     /**
      * 获取缓存项的剩余生存时间（TTL）
-     * @param  string $key 缓存键
+     * @param string $key 缓存键
      * @return int    剩余秒数，0表示永不过期，-1表示已过期或不存在
      */
     public function getTtl($key): int

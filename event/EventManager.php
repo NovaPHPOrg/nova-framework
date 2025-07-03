@@ -12,13 +12,11 @@ declare(strict_types=1);
 
 namespace nova\framework\event;
 
-use function nova\framework\config;
-
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use ReflectionClass;
-
 use ReflectionException;
+use function nova\framework\config;
 
 /**
  * 事件管理器类
@@ -42,13 +40,6 @@ class EventManager
      *                                          ]
      */
     private array $events = [];
-
-    public static function getInstance(): EventManager
-    {
-        return Context::instance()->getOrCreateInstance("EventManager", function () {
-            return new EventManager();
-        });
-    }
 
     /**
      * 注册框架启动事件
@@ -82,12 +73,13 @@ class EventManager
     {
         self::getInstance()->_addListener($event_name, $func, $level);
     }
+
     /**
      * 监听事件
      *
-     * @param string   $event_name 事件名
-     * @param callable $func       事件处理函数，接收参数 (string $event_name, mixed &$data)
-     * @param int      $level      优先级(0-最高，默认1000)
+     * @param string $event_name 事件名
+     * @param callable $func 事件处理函数，接收参数 (string $event_name, mixed &$data)
+     * @param int $level 优先级(0-最高，默认1000)
      */
     public function _addListener(string $event_name, callable $func, int $level = 1000): void
     {
@@ -105,13 +97,11 @@ class EventManager
         ksort($this->events[$event_name]);
     }
 
-    /**
-     * 删除事件
-     * @param string $event_name 事件名称
-     */
-    public function removeListener(string $event_name): void
+    public static function getInstance(): EventManager
     {
-        unset($this->events[$event_name]);
+        return Context::instance()->getOrCreateInstance("EventManager", function () {
+            return new EventManager();
+        });
     }
 
     public static function trigger(string $event_name, mixed &$data = null, bool $once = false): mixed
@@ -122,9 +112,9 @@ class EventManager
     /**
      * 触发事件
      *
-     * @param  string           $event_name 事件名
-     * @param  mixed|null       &$data      事件携带的数据，通过引用传递可在事件处理中修改
-     * @param  bool             $once       是否只获取第一个非空返回值
+     * @param string $event_name 事件名
+     * @param mixed|null       &$data 事件携带的数据，通过引用传递可在事件处理中修改
+     * @param bool $once 是否只获取第一个非空返回值
      * @return array|mixed|null 返回事件处理结果:
      *                          - 当 $once 为 true 时，返回第一个非空结果
      *                          - 当 $once 为 false 时，返回所有处理结果的数组
@@ -154,6 +144,15 @@ class EventManager
     }
 
     /**
+     * 删除事件
+     * @param string $event_name 事件名称
+     */
+    public function removeListener(string $event_name): void
+    {
+        unset($this->events[$event_name]);
+    }
+
+    /**
      * 获取所有已注册的事件列表
      *
      * @return array<string, array<int, callable>> 返回事件名到处理器数组的映射
@@ -166,7 +165,7 @@ class EventManager
     /**
      * 检查事件是否已注册
      *
-     * @param  string $event_name 要检查的事件名
+     * @param string $event_name 要检查的事件名
      * @return bool   如果事件已注册返回 true，否则返回 false
      */
     public function hasListener(string $event_name): bool
@@ -177,7 +176,7 @@ class EventManager
     /**
      * 获取指定事件的监听器数量
      *
-     * @param  string $event_name 事件名
+     * @param string $event_name 事件名
      * @return int    返回监听器数量，如果事件未注册则返回 0
      */
     public function getListenerCount(string $event_name): int

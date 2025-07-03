@@ -49,14 +49,14 @@ class Request
         $this->id = uniqid("req_", true);
     }
 
-    public function setRoute(RouteObject $route): void
-    {
-        $this->route = $route;
-    }
-
     public function getRoute(): ?RouteObject
     {
         return $this->route;
+    }
+
+    public function setRoute(RouteObject $route): void
+    {
+        $this->route = $route;
     }
 
     /**
@@ -79,7 +79,7 @@ class Request
 
     /**
      * 获取header头部内容
-     * @param  string     $headName 头部字段名称
+     * @param string $headName 头部字段名称
      * @return mixed|null 返回头部值，不存在时返回null
      */
     public function getHeaderValue($headName): mixed
@@ -91,18 +91,6 @@ class Request
             return $this->headers[$headName];
         }
         return null;
-    }
-
-    /**
-     * 获取所有请求头信息
-     * @return array 返回所有请求头数组
-     */
-    public function getHeaders(): array
-    {
-        if (empty($this->headers)) {
-            $this->initHeaders();
-        }
-        return $this->headers;
     }
 
     /**
@@ -135,33 +123,15 @@ class Request
     }
 
     /**
-     * 获取当前请求的HTTP协议类型
-     * @return string 返回 'http://' 或 'https://'
+     * 获取所有请求头信息
+     * @return array 返回所有请求头数组
      */
-    public function getHttpScheme(): string
+    public function getHeaders(): array
     {
-        // 判断是否为 HTTPS
-        if ($this->isHttps()) {
-            $httpScheme = 'https://';
-        } else {
-            $httpScheme = 'http://';
+        if (empty($this->headers)) {
+            $this->initHeaders();
         }
-
-        return $httpScheme;
-    }
-
-    /**
-     * 判断当前请求是否为HTTPS
-     * @return bool 如果是HTTPS返回true，否则返回false
-     */
-    private function isHttps(): bool
-    {
-        return (
-            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
-            (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) === 'on') ||
-            (isset($_SERVER['SERVER_PORT']) && intval($_SERVER['SERVER_PORT']) == 443) ||
-            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
-        );
+        return $this->headers;
     }
 
     /**
@@ -195,13 +165,43 @@ class Request
     }
 
     /**
+     * 获取当前请求的HTTP协议类型
+     * @return string 返回 'http://' 或 'https://'
+     */
+    public function getHttpScheme(): string
+    {
+        // 判断是否为 HTTPS
+        if ($this->isHttps()) {
+            $httpScheme = 'https://';
+        } else {
+            $httpScheme = 'http://';
+        }
+
+        return $httpScheme;
+    }
+
+    /**
+     * 判断当前请求是否为HTTPS
+     * @return bool 如果是HTTPS返回true，否则返回false
+     */
+    private function isHttps(): bool
+    {
+        return (
+            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') ||
+            (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) === 'on') ||
+            (isset($_SERVER['SERVER_PORT']) && intval($_SERVER['SERVER_PORT']) == 443) ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
+        );
+    }
+
+    /**
      * 获取当前访问的地址
      * 例如：https://example.com/
      * @return string
      */
     public function getBasicAddress(): string
     {
-        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"] ;
+        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"];
     }
 
     /**
@@ -221,6 +221,17 @@ class Request
             return $data;
         }
         return $data;
+    }
+
+    /**
+     * 获取GET参数
+     * @param string|null $key 参数键名
+     * @param mixed|null $default 默认值
+     * @return mixed       返回参数值
+     */
+    public function get(string $key = null, mixed $default = null): mixed
+    {
+        return Arguments::get($key, $default);
     }
 
     /**
@@ -292,20 +303,9 @@ class Request
     }
 
     /**
-     * 获取GET参数
-     * @param  string|null $key     参数键名
-     * @param  mixed|null  $default 默认值
-     * @return mixed       返回参数值
-     */
-    public function get(string $key = null, mixed $default = null): mixed
-    {
-        return Arguments::get($key, $default);
-    }
-
-    /**
      * 获取POST参数
-     * @param  string|null $key     参数键名
-     * @param  mixed|null  $default 默认值
+     * @param string|null $key 参数键名
+     * @param mixed|null $default 默认值
      * @return mixed       返回参数值
      */
     public function post(string $key = null, mixed $default = null): mixed
@@ -315,8 +315,8 @@ class Request
 
     /**
      * 获取任意请求参数（GET/POST）
-     * @param  string|null $key     参数键名
-     * @param  mixed|null  $default 默认值
+     * @param string|null $key 参数键名
+     * @param mixed|null $default 默认值
      * @return mixed       返回参数值
      */
     public function arg(string $key = null, mixed $default = null): mixed

@@ -27,8 +27,8 @@ class AppExitException extends Exception
 
     /**
      * 构造函数
-     * @param mixed  $response 需要返回的响应
-     * @param string $message  异常信息
+     * @param mixed $response 需要返回的响应
+     * @param string $message 异常信息
      */
     public function __construct($response, $message = "App Exit")
     {
@@ -40,15 +40,6 @@ class AppExitException extends Exception
     }
 
     /**
-     * 获取响应对象
-     * @return Response
-     */
-    public function response(): Response
-    {
-        return $this->response;
-    }
-
-    /**
      * 获取调用此异常的上一个函数名
      * @return string|null 返回函数名，如果无法获取则返回null
      */
@@ -56,5 +47,14 @@ class AppExitException extends Exception
     {
         $backtrace = debug_backtrace();
         return $backtrace[2]['function'] ?? null;
+    }
+
+    /**
+     * 获取响应对象
+     * @return Response
+     */
+    public function response(): Response
+    {
+        return $this->response;
     }
 }

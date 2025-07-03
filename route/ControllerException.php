@@ -32,8 +32,8 @@ class ControllerException extends Exception
     /**
      * 构造函数
      *
-     * @param string           $message 异常信息
-     * @param RouteObject|null $route   相关的路由对象
+     * @param string $message 异常信息
+     * @param RouteObject|null $route 相关的路由对象
      */
     public function __construct(string $message = "", RouteObject $route = null)
     {

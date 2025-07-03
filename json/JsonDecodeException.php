@@ -26,9 +26,9 @@ class JsonDecodeException extends Exception
     /**
      * 构造函数
      *
-     * @param string         $message  错误信息
-     * @param string         $json     导致错误的 JSON 字符串
-     * @param int            $code     错误代码
+     * @param string $message 错误信息
+     * @param string $json 导致错误的 JSON 字符串
+     * @param int $code 错误代码
      * @param Throwable|null $previous 上一个异常（用于异常链）
      */
     public function __construct(string $message = "", $json = "", int $code = 0, ?Throwable $previous = null)

@@ -39,10 +39,10 @@ class RouteObject
     /**
      * 构造函数
      *
-     * @param string $module     模块名称
+     * @param string $module 模块名称
      * @param string $controller 控制器名称
-     * @param string $action     动作方法名称
-     * @param array  $params     路由参数
+     * @param string $action 动作方法名称
+     * @param array $params 路由参数
      */
     public function __construct(string $module = "", string $controller = "", string $action = "", array $params = [])
     {

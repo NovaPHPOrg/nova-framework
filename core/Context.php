@@ -39,75 +39,52 @@ use RuntimeException;
 class Context
 {
     /**
+     * @var string 框架版本号
+     *             当前框架的版本信息
+     */
+    public const string VERSION = "5.0.1";
+public Cache $cache;
+    /**
      * @var float 应用启动时间戳
      *            记录应用开始执行的微秒级时间戳，用于性能分析
      */
     protected float $start_time = 0.0;
-
     /**
      * @var Config 配置对象实例
      *             存储和管理应用的所有配置信息
      */
     protected Config $config;
-
     /**
      * @var bool 调试模式开关
      *           控制应用是否运行在调试模式下，影响错误显示等行为
      */
     protected bool $debug = false;
-
     /**
      * @var Request 当前请求对象
      *              封装了当前HTTP请求的信息
      */
     protected Request $request;
-
     /**
      * @var string 会话ID
      *             当前用户会话的唯一标识符
      */
     protected string $session_id;
-
     /**
      * @var Loader 类加载器实例
      *             负责自动加载类文件
      */
     protected Loader $loader;
-
-    /**
-     * @var string 框架版本号
-     *             当前框架的版本信息
-     */
-    public const string VERSION = "5.0.1";
-
     /**
      * @var array<string, mixed> 实例容器
      *                           存储框架中的服务实例，实现依赖注入
      */
     protected array $instances = [];
-
-    /**
+        /**
      * @var array<string, mixed> 变量存储
      *                           用于在整个应用生命周期中存储临时数据
      */
-    protected array $vars = [];
-    public Cache $cache; //缓存类
+    protected array $vars = []; //缓存类
 
-    /**
-     * 获取Context单例实例
-     * 确保整个应用中只有一个Context实例
-     *
-     * @return Context          返回Context实例
-     * @throws RuntimeException 如果Context未初始化则抛出异常
-     */
-    public static function instance(): Context
-    {
-        global $context;
-        if (!$context) {
-            $context = new Context(new Loader());
-        }
-        return $context;
-    }
     /**
      * 构造函数
      * 初始化应用环境，设置基础配置，启动核心组件
@@ -127,94 +104,6 @@ class Context
         $this->initRequest();
         // 初始化加载器
         $this->initLoader($loader);
-
-
-    }
-
-
-    public function init()
-    {
-        $this->cache = new Cache();
-    }
-
-    /**
-     * 获取或创建实例
-     * 实现简单的依赖注入容器功能
-     *
-     * @param  string   $name   实例名称
-     * @param  callable $create 创建实例的回调函数
-     * @return mixed    返回已存在的实例或新创建的实例
-     *
-     * @example
-     * ```php
-     * $db = $context->getOrCreateInstance('db', function() {
-     *     return new Database();
-     * });
-     * ```
-     */
-    public function getOrCreateInstance(string $name, callable $create): mixed
-    {
-        if (!isset($this->instances[$name])) {
-            $this->instances[$name] = $create();
-        }
-        return $this->instances[$name];
-    }
-
-    /**
-     * 初始化类加载器
-     * 配置命名空间映射关系
-     *
-     * @param Loader $loader 加载器实例
-     */
-    public function initLoader(Loader $loader): void
-    {
-        $this->loader = $loader;
-        $this->loader->setNamespace($this->config->get('namespace', []));
-    }
-    /**
-     * 初始化配置
-     * 创建配置对象，设置调试模式和时区
-     */
-    public function initConfig(): void
-    {
-        $this->config = new Config();
-        $this->debug = $this->config->get('debug') ?? false;
-        date_default_timezone_set($this->config->get('timezone', "Asia/Shanghai"));
-    }
-
-    /**
-     * 初始化请求
-     * 创建请求对象并设置会话ID
-     */
-    public function initRequest(): void
-    {
-        $this->request = new Request();
-        $this->session_id = $this->request->id();
-    }
-
-    /**
-     * 获取会话ID
-     *
-     * @return string 当前会话的唯一标识符
-     */
-    public function getSessionId(): string
-    {
-        return $this->session_id;
-    }
-
-    /**
-     * 检查域名是否合法
-     * 验证当前请求的域名是否在允许列表中
-     *
-     * @throws RuntimeException 当域名不在允许列表中时终止执行
-     */
-    public function checkDomain(): void
-    {
-        $domains = $this->config->get("domain");
-        $serverName = $_SERVER["HTTP_HOST"];
-        if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
-            exit("[ NovaPHP ] Domain Error ：" . htmlspecialchars($serverName) . " not in config.domain list.");
-        }
 
     }
 
@@ -250,6 +139,123 @@ class Context
         defined('NOVA_VERSION') or define('NOVA_VERSION', self::VERSION);
 
     }
+
+    /**
+     * 初始化配置
+     * 创建配置对象，设置调试模式和时区
+     */
+    public function initConfig(): void
+    {
+        $this->config = new Config();
+        $this->debug = $this->config->get('debug') ?? false;
+        date_default_timezone_set($this->config->get('timezone', "Asia/Shanghai"));
+    }
+
+    /**
+     * 获取变量值
+     * 获取存储在应用范围内的临时数据
+     *
+     * @param string $name 变量名
+     * @param mixed|null $default 默认值
+     * @return mixed      返回变量值，不存在时返回默认值
+     */
+    public function get(string $name, mixed $default = null): mixed
+    {
+        return $this->vars[$name] ?? $default;
+    }
+
+    /**
+     * 检查域名是否合法
+     * 验证当前请求的域名是否在允许列表中
+     *
+     * @throws RuntimeException 当域名不在允许列表中时终止执行
+     */
+    public function checkDomain(): void
+    {
+        $domains = $this->config->get("domain");
+        $serverName = $_SERVER["HTTP_HOST"];
+        if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
+            exit("[ NovaPHP ] Domain Error ：" . htmlspecialchars($serverName) . " not in config.domain list.");
+        }
+
+    }
+
+    /**
+     * 初始化请求
+     * 创建请求对象并设置会话ID
+     */
+    public function initRequest(): void
+    {
+        $this->request = new Request();
+        $this->session_id = $this->request->id();
+    }
+
+    /**
+     * 初始化类加载器
+     * 配置命名空间映射关系
+     *
+     * @param Loader $loader 加载器实例
+     */
+    public function initLoader(Loader $loader): void
+    {
+        $this->loader = $loader;
+        $this->loader->setNamespace($this->config->get('namespace', []));
+    }
+
+    /**
+     * 获取Context单例实例
+     * 确保整个应用中只有一个Context实例
+     *
+     * @return Context          返回Context实例
+     * @throws RuntimeException 如果Context未初始化则抛出异常
+     */
+    public static function instance(): Context
+    {
+        global $context;
+        if (!$context) {
+            $context = new Context(new Loader());
+        }
+        return $context;
+    }
+
+    public function init()
+    {
+        $this->cache = new Cache();
+    }
+
+    /**
+     * 获取或创建实例
+     * 实现简单的依赖注入容器功能
+     *
+     * @param string $name 实例名称
+     * @param callable $create 创建实例的回调函数
+     * @return mixed    返回已存在的实例或新创建的实例
+     *
+     * @example
+     * ```php
+     * $db = $context->getOrCreateInstance('db', function() {
+     *     return new Database();
+     * });
+     * ```
+     */
+    public function getOrCreateInstance(string $name, callable $create): mixed
+    {
+        if (!isset($this->instances[$name])) {
+            $this->instances[$name] = $create();
+        }
+        return $this->instances[$name];
+    }
+
+    /**
+     * 获取会话ID
+     *
+     * @return string 当前会话的唯一标识符
+     */
+    public function getSessionId(): string
+    {
+        return $this->session_id;
+    }
+
     /**
      * 获取会话ID
      *
@@ -301,13 +307,6 @@ class Context
         return microtime(true) - $this->start_time;
     }
 
-    public function destroy(): void
-    {
-        foreach ($this->instances as &$instance) {
-            $instance = null;
-        }
-        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES =  [];
-    }
     /**
      * 析构函数
      * 清理实例资源
@@ -317,34 +316,29 @@ class Context
         $this->destroy();
     }
 
-    /**
-     * 设置变量值
-     * 在应用范围内存储临时数据
-     *
-     * @param string $name  变量名
-     * @param mixed  $value 变量值
-     */
-    public function set(string $name, mixed $value): void
+    public function destroy(): void
     {
-        $this->vars[$name] = $value;
-    }
-
-    /**
-     * 获取变量值
-     * 获取存储在应用范围内的临时数据
-     *
-     * @param  string     $name    变量名
-     * @param  mixed|null $default 默认值
-     * @return mixed      返回变量值，不存在时返回默认值
-     */
-    public function get(string $name, mixed $default = null): mixed
-    {
-        return $this->vars[$name] ?? $default;
+        foreach ($this->instances as &$instance) {
+            $instance = null;
+        }
+        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES = [];
     }
 
     public function setResponseClass(string $class): void
     {
         $this->set('response.class', $class);
+    }
+
+    /**
+     * 设置变量值
+     * 在应用范围内存储临时数据
+     *
+     * @param string $name 变量名
+     * @param mixed $value 变量值
+     */
+    public function set(string $name, mixed $value): void
+    {
+        $this->vars[$name] = $value;
     }
 
     public function getResponseClass(): string

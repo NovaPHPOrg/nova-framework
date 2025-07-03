@@ -68,11 +68,6 @@ class Loader
 
     private string $hash = '';
 
-    private function hash(array $cache): string
-    {
-        return md5(serialize($cache));
-    }
-
     /**
      * 构造函数
      *
@@ -113,29 +108,9 @@ class Loader
         }, true, true);
     }
 
-    /**
-     * 析构函数
-     *
-     * 将类文件映射缓存持久化到文件系统
-     * 格式化为PHP数组返回语句，便于直接require加载
-     */
-    public function __destruct()
+    private function hash(array $cache): string
     {
-        if ($this->hash($this->autoloadFilesCache) != $this->hash) {
-            file_put_contents($this->file, "<?php\nreturn " . var_export($this->autoloadFilesCache, true) . ";");
-        }
-
-    }
-
-    /**
-     * 设置命名空间映射
-     *
-     * @param array $namespace 命名空间映射配置
-     *                         格式：['命名空间前缀' => '目录路径']
-     */
-    public function setNamespace(array $namespace): void
-    {
-        $this->namespace = $namespace;
+        return md5(serialize($cache));
     }
 
     /**
@@ -166,10 +141,10 @@ class Loader
         foreach ($namespace as $prefix => $replace) {
             // 将类名转换为文件路径
             $realClass = str_replace(
-                "\\",
-                DIRECTORY_SEPARATOR,
-                str_replace($prefix, $replace, $raw)
-            ) . ".php";
+                    "\\",
+                    DIRECTORY_SEPARATOR,
+                    str_replace($prefix, $replace, $raw)
+                ) . ".php";
             $file = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . $realClass;
 
             // 如果文件存在，则加载并缓存
@@ -189,5 +164,30 @@ class Loader
     private function load(string $file): void
     {
         require_once $file;
+    }
+
+    /**
+     * 析构函数
+     *
+     * 将类文件映射缓存持久化到文件系统
+     * 格式化为PHP数组返回语句，便于直接require加载
+     */
+    public function __destruct()
+    {
+        if ($this->hash($this->autoloadFilesCache) != $this->hash) {
+            file_put_contents($this->file, "<?php\nreturn " . var_export($this->autoloadFilesCache, true) . ";");
+        }
+
+    }
+
+    /**
+     * 设置命名空间映射
+     *
+     * @param array $namespace 命名空间映射配置
+     *                         格式：['命名空间前缀' => '目录路径']
+     */
+    public function setNamespace(array $namespace): void
+    {
+        $this->namespace = $namespace;
     }
 }

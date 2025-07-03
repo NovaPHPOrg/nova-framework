@@ -20,8 +20,8 @@ class Arguments
 {
     /**
      * 从get参数中获取
-     * @param  ?string                          $key
-     * @param  mixed|null                       $default
+     * @param  ?string $key
+     * @param mixed|null $default
      * @return bool|float|int|mixed|string|null
      */
     public static function get(string $key = null, mixed $default = null): mixed
@@ -37,8 +37,8 @@ class Arguments
 
     /**
      * 从post参数中获取
-     * @param  ?string                          $key
-     * @param  mixed|null                       $default
+     * @param  ?string $key
+     * @param mixed|null $default
      * @return bool|float|int|mixed|string|null
      */
     public static function post(string $key = null, mixed $default = null): mixed
@@ -54,8 +54,8 @@ class Arguments
 
     /**
      * 所有参数
-     * @param  ?string                          $key
-     * @param  mixed|null                       $default
+     * @param  ?string $key
+     * @param mixed|null $default
      * @return bool|float|int|mixed|string|null
      */
     public static function arg(string $key = null, mixed $default = null): mixed

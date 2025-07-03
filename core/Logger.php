@@ -13,10 +13,8 @@ declare(strict_types=1);
 namespace nova\framework\core;
 
 use Exception;
-
-use function nova\framework\isCli;
-
 use RuntimeException;
+use function nova\framework\isCli;
 
 /**
  * 增强版日志处理类
@@ -44,41 +42,32 @@ class Logger extends NovaApp
      */
     private const array LOG_LEVELS = [
         'EMERGENCY' => 0, // 系统不可用
-        'ALERT'     => 1, // 必须立即采取行动
-        'CRITICAL'  => 2, // 危急情况
-        'ERROR'     => 3, // 运行时错误
-        'WARNING'   => 4, // 警告但不是错误
-        'NOTICE'    => 5, // 普通但重要的事件
-        'INFO'      => 6, // 感兴趣的事件
-        'DEBUG'     => 7  // 详细的调试信息
+        'ALERT' => 1, // 必须立即采取行动
+        'CRITICAL' => 2, // 危急情况
+        'ERROR' => 3, // 运行时错误
+        'WARNING' => 4, // 警告但不是错误
+        'NOTICE' => 5, // 普通但重要的事件
+        'INFO' => 6, // 感兴趣的事件
+        'DEBUG' => 7  // 详细的调试信息
     ];
-
-    /** @var bool 是否处于调试模式 */
-    private bool $debug;
-
-    /** @var resource|false 日志文件句柄 */
-    private $handle;
-
-    /** @var string 主日志文件路径 */
-    private string $logFile;
-
-    /** @var string 临时日志文件路径 */
-    private string $tempFile;
-
-    /** @var array 日志缓冲区 */
-    private array $buffer = [];
-
-    /** @var int 缓冲区大小，达到此数量时会自动刷新到文件 */
-    private int $bufferSize = 100;
-
-    /** @var string 日志目录路径 */
-    private string $logDir;
-
-    /** @var int 单个日志文件的最大大小（字节） */
-    private const int MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
+/** @var int 单个日志文件的最大大小（字节） */
+    private const int MAX_FILE_SIZE = 10 * 1024 * 1024;
     /** @var int 最大保留的日志文件数量 */
     private const int MAX_FILES = 5;
+    /** @var bool 是否处于调试模式 */
+    private bool $debug;
+    /** @var resource|false 日志文件句柄 */
+    private $handle;
+    /** @var string 主日志文件路径 */
+    private string $logFile;
+    /** @var string 临时日志文件路径 */
+    private string $tempFile;
+    /** @var array 日志缓冲区 */
+    private array $buffer = [];
+    /** @var int 缓冲区大小，达到此数量时会自动刷新到文件 */
+    private int $bufferSize = 100; // 10MB
+    /** @var string 日志目录路径 */
+    private string $logDir;
 
     /**
      * 构造函数
@@ -116,7 +105,7 @@ class Logger extends NovaApp
     /**
      * 创建目录（如果不存在）
      *
-     * @param  string           $path 要创建的目录路径
+     * @param string $path 要创建的目录路径
      * @throws RuntimeException 当目录创建失败时
      */
     private function createDirectory(string $path): void
@@ -127,11 +116,22 @@ class Logger extends NovaApp
     }
 
     /**
+     * 紧急情况：系统不可用
+     *
+     * @param mixed $message 日志消息
+     * @param array $context 上下文信息
+     */
+    public static function emergency($message, array $context = []): void
+    {
+        self::getInstance()->write($message, 'EMERGENCY', $context);
+    }
+
+    /**
      * 写入日志
      *
-     * @param mixed  $message 日志消息，可以是字符串或任何可JSON序列化的数据
-     * @param string $level   日志级别
-     * @param array  $context 上下文信息，将被JSON序列化
+     * @param mixed $message 日志消息，可以是字符串或任何可JSON序列化的数据
+     * @param string $level 日志级别
+     * @param array $context 上下文信息，将被JSON序列化
      */
     protected function write($message, string $level, array $context = []): void
     {
@@ -201,12 +201,33 @@ class Logger extends NovaApp
     }
 
     /**
+     * 格式化堆栈跟踪信息
+     *
+     * @param array $trace debug_backtrace()的结果
+     * @return array 格式化后的堆栈信息
+     */
+    private function formatStackTrace(array $trace): array
+    {
+        $stackTrace = [];
+        foreach ($trace as $i => $t) {
+            $stackTrace[] = [
+                'file' => $t['file'] ?? 'unknown',
+                'line' => $t['line'] ?? 0,
+                'function' => $t['function'] ?? '',
+                'class' => $t['class'] ?? '',
+                'type' => $t['type'] ?? '',
+            ];
+        }
+        return $stackTrace;
+    }
+
+    /**
      * 格式化日志消息
      *
-     * @param  mixed  $message 原始消息
-     * @param  string $level   日志级别
-     * @param  array  $caller  调用者信息
-     * @param  array  $context 上下文信息
+     * @param mixed $message 原始消息
+     * @param string $level 日志级别
+     * @param array $caller 调用者信息
+     * @param array $context 上下文信息
      * @return string 格式化后的日志字符串
      */
     private function formatLogMessage($message, string $level, array $caller, array $context): string
@@ -287,7 +308,7 @@ class Logger extends NovaApp
     /**
      * 格式化字节大小为人类可读格式
      *
-     * @param  int    $bytes 字节数
+     * @param int $bytes 字节数
      * @return string 格式化后的大小
      */
     private function formatBytes(int $bytes): string
@@ -326,57 +347,15 @@ class Logger extends NovaApp
     }
 
     /**
-     * 日志文件轮转
-     * 当日志文件超过最大大小时，进行文件轮转
-     * 例如：log.txt -> log.txt.1 -> log.txt.2 -> ...
-     */
-    private function rotateLogFile(): void
-    {
-        if (!file_exists($this->logFile) || filesize($this->logFile) < self::MAX_FILE_SIZE) {
-            return;
-        }
-
-        for ($i = self::MAX_FILES - 1; $i > 0; $i--) {
-            $oldFile = "{$this->logFile}.{$i}";
-            $newFile = "{$this->logFile}." . ($i + 1);
-            if (file_exists($oldFile)) {
-                rename($oldFile, $newFile);
-            }
-        }
-
-        rename($this->logFile, "{$this->logFile}.1");
-    }
-
-    /**
-     * 格式化堆栈跟踪信息
+     * 获取Logger单例实例
      *
-     * @param  array $trace debug_backtrace()的结果
-     * @return array 格式化后的堆栈信息
+     * @return Logger
      */
-    private function formatStackTrace(array $trace): array
+    private static function getInstance(): Logger
     {
-        $stackTrace = [];
-        foreach ($trace as $i => $t) {
-            $stackTrace[] = [
-                'file' => $t['file'] ?? 'unknown',
-                'line' => $t['line'] ?? 0,
-                'function' => $t['function'] ?? '',
-                'class' => $t['class'] ?? '',
-                'type' => $t['type'] ?? '',
-            ];
-        }
-        return $stackTrace;
-    }
-
-    /**
-     * 紧急情况：系统不可用
-     *
-     * @param mixed $message 日志消息
-     * @param array $context 上下文信息
-     */
-    public static function emergency($message, array $context = []): void
-    {
-        self::getInstance()->write($message, 'EMERGENCY', $context);
+        return Context::instance()->getOrCreateInstance('logger', function () {
+            return new Logger();
+        });
     }
 
     /**
@@ -442,18 +421,6 @@ class Logger extends NovaApp
     }
 
     /**
-     * 获取Logger单例实例
-     *
-     * @return Logger
-     */
-    private static function getInstance(): Logger
-    {
-        return Context::instance()->getOrCreateInstance('logger', function () {
-            return new Logger();
-        });
-    }
-
-    /**
      * 析构函数
      * 确保所有日志都被写入并正确关闭文件句柄
      */
@@ -487,5 +454,27 @@ class Logger extends NovaApp
                 echo "Logger Error: " . $e->getMessage() . "\n";
             }
         }
+    }
+
+    /**
+     * 日志文件轮转
+     * 当日志文件超过最大大小时，进行文件轮转
+     * 例如：log.txt -> log.txt.1 -> log.txt.2 -> ...
+     */
+    private function rotateLogFile(): void
+    {
+        if (!file_exists($this->logFile) || filesize($this->logFile) < self::MAX_FILE_SIZE) {
+            return;
+        }
+
+        for ($i = self::MAX_FILES - 1; $i > 0; $i--) {
+            $oldFile = "{$this->logFile}.{$i}";
+            $newFile = "{$this->logFile}." . ($i + 1);
+            if (file_exists($oldFile)) {
+                rename($oldFile, $newFile);
+            }
+        }
+
+        rename($this->logFile, "{$this->logFile}.1");
     }
 }

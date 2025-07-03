@@ -94,26 +94,6 @@ class VarDump
     }
 
     /**
-     * 格式化输出
-     * 根据配置返回HTML格式或纯文本格式的输出
-     *
-     * @param  string $type       变量类型
-     * @param  string $content    内容
-     * @param  array  $attributes 额外的HTML属性
-     * @return string 格式化后的字符串
-     */
-    private function format(string $type, string $content, array $attributes = []): string
-    {
-        if (!$this->htmlOutput) {
-            return $content;
-        }
-
-        $style = self::STYLES[$type] ?? '';
-        $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
-        return sprintf('<span style="%s">%s</span>', $style, $content);
-    }
-
-    /**
      * 输出回调函数
      * 使用反射获取并格式化回调函数的代码
      *
@@ -143,8 +123,28 @@ class VarDump
     }
 
     /**
+     * 格式化输出
+     * 根据配置返回HTML格式或纯文本格式的输出
+     *
+     * @param string $type 变量类型
+     * @param string $content 内容
+     * @param array $attributes 额外的HTML属性
+     * @return string 格式化后的字符串
+     */
+    private function format(string $type, string $content, array $attributes = []): string
+    {
+        if (!$this->htmlOutput) {
+            return $content;
+        }
+
+        $style = self::STYLES[$type] ?? '';
+        $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
+        return sprintf('<span style="%s">%s</span>', $style, $content);
+    }
+
+    /**
      * 输出变量类型为字符串
-     * @param  mixed  $param
+     * @param mixed $param
      * @return string
      */
     public function dumpTypeAsString(mixed $param): string
@@ -159,7 +159,7 @@ class VarDump
      * 将变量转为JSON格式输出
      * 支持递归处理对象和数组
      *
-     * @param  mixed $param 要转换的变量
+     * @param mixed $param 要转换的变量
      * @return array JSON格式的数组
      */
     public function dumpTypeToJson(mixed $param): array
@@ -176,7 +176,7 @@ class VarDump
         $data = [];
 
         foreach ($param as $key => $value) {
-            $data[$key] = match(true) {
+            $data[$key] = match (true) {
                 is_object($value) => $this->handleObject($value),
                 is_array($value) => $this->handleArray($value),
                 default => $value
@@ -191,7 +191,7 @@ class VarDump
      * 处理对象类型
      * 检测循环引用并格式化对象
      *
-     * @param  object       $value 要处理的对象
+     * @param object $value 要处理的对象
      * @return array|string 处理结果
      */
     private function handleObject(object $value): array|string
@@ -206,27 +206,10 @@ class VarDump
     }
 
     /**
-     * 处理数组类型
-     * 检测循环引用并格式化数组
-     *
-     * @param  array        $value 要处理的数组
-     * @return array|string 处理结果
-     */
-    private function handleArray(array $value): array|string
-    {
-        if (in_array($value, $this->vars, true)) {
-            return "reference &array";
-        }
-
-        $this->vars[] = $value;
-        return $this->dumpTypeToJson($value);
-    }
-
-    /**
      * 处理对象属性
      * 使用反射获取对象的所有属性
      *
-     * @param  object $value 要处理的对象
+     * @param object $value 要处理的对象
      * @return array  对象属性数组
      */
     private function processObject(object $value): array
@@ -253,11 +236,28 @@ class VarDump
     }
 
     /**
+     * 处理数组类型
+     * 检测循环引用并格式化数组
+     *
+     * @param array $value 要处理的数组
+     * @return array|string 处理结果
+     */
+    private function handleArray(array $value): array|string
+    {
+        if (in_array($value, $this->vars, true)) {
+            return "reference &array";
+        }
+
+        $this->vars[] = $value;
+        return $this->dumpTypeToJson($value);
+    }
+
+    /**
      * 自动选择类型输出
      * 根据变量类型选择合适的格式化方法
      *
-     * @param  mixed  $param       要输出的变量
-     * @param  int    $indentLevel 缩进级别
+     * @param mixed $param 要输出的变量
+     * @param int $indentLevel 缩进级别
      * @return string 格式化后的字符串
      */
     public function dumpType(mixed $param, int $indentLevel = 0): string
@@ -269,7 +269,7 @@ class VarDump
         $this->currentDepth++;
         $this->handleReference($param);
 
-        $output = match(gettype($param)) {
+        $output = match (gettype($param)) {
             'NULL' => $this->format('null', 'null'),
             'boolean' => $this->formatBoolean($param),
             'integer' => $this->formatInteger($param),
@@ -312,7 +312,7 @@ class VarDump
     /**
      * 格式化布尔值
      *
-     * @param  bool   $param 布尔值
+     * @param bool $param 布尔值
      * @return string 格式化后的字符串
      */
     private function formatBoolean(bool $param): string
@@ -327,7 +327,7 @@ class VarDump
     /**
      * 格式化整数
      *
-     * @param  int    $param 整数值
+     * @param int $param 整数值
      * @return string 格式化后的字符串
      */
     private function formatInteger(int $param): string
@@ -342,7 +342,7 @@ class VarDump
     /**
      * 格式化浮点数
      *
-     * @param  float  $param 浮点数值
+     * @param float $param 浮点数值
      * @return string 格式化后的字符串
      */
     private function formatFloat(float $param): string
@@ -357,7 +357,7 @@ class VarDump
     /**
      * 格式化字符串
      *
-     * @param  string $param 字符串值
+     * @param string $param 字符串值
      * @return string 格式化后的字符串
      */
     private function formatString(string $param): string
@@ -374,8 +374,8 @@ class VarDump
      * 格式化数组
      * 递归处理数组元素
      *
-     * @param  array  $param       数组值
-     * @param  int    $indentLevel 缩进级别
+     * @param array $param 数组值
+     * @param int $indentLevel 缩进级别
      * @return string 格式化后的字符串
      */
     private function formatArray(array $param, int $indentLevel): string
@@ -408,8 +408,8 @@ class VarDump
      * 格式化对象
      * 处理标准对象和自定义对象
      *
-     * @param  object $param       对象值
-     * @param  int    $indentLevel 缩进级别
+     * @param object $param 对象值
+     * @param int $indentLevel 缩进级别
      * @return string 格式化后的字符串
      */
     private function formatObject(object $param, int $indentLevel): string
@@ -432,8 +432,8 @@ class VarDump
     /**
      * 格式化对象属性
      *
-     * @param  object $obj 对象
-     * @param  int    $num 对象ID
+     * @param object $obj 对象
+     * @param int $num 对象ID
      * @return string 格式化后的字符串
      */
     private function formatProperties(object $obj, int $num): string

@@ -12,14 +12,11 @@ declare(strict_types=1);
 
 namespace nova\framework\route;
 
-use function nova\framework\config;
-
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\core\NovaApp;
-
 use nova\framework\event\EventManager;
-
+use function nova\framework\config;
 use function nova\framework\route;
 
 /**
@@ -28,20 +25,16 @@ use function nova\framework\route;
  */
 class Route extends NovaApp
 {
-    /** @var array 存储所有注册的路由 */
-    private array $routes = [];
-
-    /** @var array 按HTTP方法索引的路由缓存 */
-    private array $routeIndex = [];
-
-    /** @var string 当前请求的URI */
-    private string $uri = "";
-
-    /** @var string 网站根路径 */
-    private string $root = "";
-
     /** @var array 正则规则缓存 */
     private static array $ruleCache = [];
+    /** @var array 存储所有注册的路由 */
+    private array $routes = [];
+    /** @var array 按HTTP方法索引的路由缓存 */
+    private array $routeIndex = [];
+    /** @var string 当前请求的URI */
+    private string $uri = "";
+    /** @var string 网站根路径 */
+    private string $root = "";
 
     /**
      * 构造函数，禁止直接实例化
@@ -51,38 +44,17 @@ class Route extends NovaApp
         parent::__construct();
     }
 
-    /**
-     * 获取Route类的单例实例
-     *
-     * @return self Route类实例
-     */
-    public static function getInstance(): self
+    public function getOrPost(string $uri, RouteObject $mapper): self
     {
-        return Context::instance()->getOrCreateInstance("Route", function () {
-            return new Route();
-        });
-    }
-
-    /**
-     * 注册 GET 请求路由
-     * 同时会自动注册对应的 HEAD 请求路由
-     *
-     * @param  string      $uri    路由URI，支持参数模式，如: /users/{id}
-     * @param  RouteObject $mapper 路由映射对象
-     * @return self        返回当前实例以支持链式调用
-     */
-    public function get(string $uri, RouteObject $mapper): self
-    {
-        $this->add($uri, $mapper, "GET");
-        $this->add($uri, $mapper, "HEAD");
+        $this->get($uri, $mapper)->post($uri, $mapper);
         return $this;
     }
 
     /**
      * 注册 POST 请求路由
      *
-     * @param  string      $uri    路由URI，支持参数模式，如: /users
-     * @param  RouteObject $mapper 路由映射对象
+     * @param string $uri 路由URI，支持参数模式，如: /users
+     * @param RouteObject $mapper 路由映射对象
      * @return self        返回当前实例以支持链式调用
      */
     public function post(string $uri, RouteObject $mapper): self
@@ -91,74 +63,12 @@ class Route extends NovaApp
         return $this;
     }
 
-    public function getOrPost(string $uri, RouteObject $mapper):self
-    {
-        $this->get($uri, $mapper)->post($uri, $mapper);
-        return $this;
-    }
-
-    /**
-     * 注册 PATCH 请求路由
-     * 通常用于部分更新资源
-     *
-     * @param  string      $uri    路由URI，支持参数模式，如: /users/{id}
-     * @param  RouteObject $mapper 路由映射对象
-     * @return self        返回当前实例以支持链式调用
-     */
-    public function patch(string $uri, RouteObject $mapper): self
-    {
-        $this->add($uri, $mapper, "PATCH");
-        return $this;
-    }
-
-    /**
-     * 注册 OPTIONS 请求路由
-     * 用于响应浏览器的预检请求
-     *
-     * @param  string      $uri    路由URI，支持参数模式，如: /users/{id}
-     * @param  RouteObject $mapper 路由映射对象
-     * @return self        返回当前实例以支持链式调用
-     */
-    public function options(string $uri, RouteObject $mapper): self
-    {
-        $this->add($uri, $mapper, "OPTIONS");
-        return $this;
-    }
-
-    /**
-     * 注册 PUT 请求路由
-     * 通常用于完整更新资源
-     *
-     * @param  string      $uri    路由URI，支持参数模式，如: /users/{id}
-     * @param  RouteObject $mapper 路由映射对象
-     * @return self        返回当前实例以支持链式调用
-     */
-    public function put(string $uri, RouteObject $mapper): self
-    {
-        $this->add($uri, $mapper, "PUT");
-        return $this;
-    }
-
-    /**
-     * 注册 DELETE 请求路由
-     * 用于删除资源
-     *
-     * @param  string      $uri    路由URI，支持参数模式，如: /users/{id}
-     * @param  RouteObject $mapper 路由映射对象
-     * @return self        返回当前实例以支持链式调用
-     */
-    public function delete(string $uri, RouteObject $mapper): self
-    {
-        $this->add($uri, $mapper, "DELETE");
-        return $this;
-    }
-
     /**
      * 添加路由到路由表中
      *
-     * @param string      $uri    路由URI
+     * @param string $uri 路由URI
      * @param RouteObject $mapper 路由映射对象
-     * @param string      $method HTTP请求方法
+     * @param string $method HTTP请求方法
      */
     private function add(string $uri, RouteObject $mapper, string $method = ""): void
     {
@@ -177,10 +87,81 @@ class Route extends NovaApp
     }
 
     /**
+     * 注册 GET 请求路由
+     * 同时会自动注册对应的 HEAD 请求路由
+     *
+     * @param string $uri 路由URI，支持参数模式，如: /users/{id}
+     * @param RouteObject $mapper 路由映射对象
+     * @return self        返回当前实例以支持链式调用
+     */
+    public function get(string $uri, RouteObject $mapper): self
+    {
+        $this->add($uri, $mapper, "GET");
+        $this->add($uri, $mapper, "HEAD");
+        return $this;
+    }
+
+    /**
+     * 注册 PATCH 请求路由
+     * 通常用于部分更新资源
+     *
+     * @param string $uri 路由URI，支持参数模式，如: /users/{id}
+     * @param RouteObject $mapper 路由映射对象
+     * @return self        返回当前实例以支持链式调用
+     */
+    public function patch(string $uri, RouteObject $mapper): self
+    {
+        $this->add($uri, $mapper, "PATCH");
+        return $this;
+    }
+
+    /**
+     * 注册 OPTIONS 请求路由
+     * 用于响应浏览器的预检请求
+     *
+     * @param string $uri 路由URI，支持参数模式，如: /users/{id}
+     * @param RouteObject $mapper 路由映射对象
+     * @return self        返回当前实例以支持链式调用
+     */
+    public function options(string $uri, RouteObject $mapper): self
+    {
+        $this->add($uri, $mapper, "OPTIONS");
+        return $this;
+    }
+
+    /**
+     * 注册 PUT 请求路由
+     * 通常用于完整更新资源
+     *
+     * @param string $uri 路由URI，支持参数模式，如: /users/{id}
+     * @param RouteObject $mapper 路由映射对象
+     * @return self        返回当前实例以支持链式调用
+     */
+    public function put(string $uri, RouteObject $mapper): self
+    {
+        $this->add($uri, $mapper, "PUT");
+        return $this;
+    }
+
+    /**
+     * 注册 DELETE 请求路由
+     * 用于删除资源
+     *
+     * @param string $uri 路由URI，支持参数模式，如: /users/{id}
+     * @param RouteObject $mapper 路由映射对象
+     * @return self        返回当前实例以支持链式调用
+     */
+    public function delete(string $uri, RouteObject $mapper): self
+    {
+        $this->add($uri, $mapper, "DELETE");
+        return $this;
+    }
+
+    /**
      * 根据URI和请求方法分发路由
      *
-     * @param  string              $uri    请求URI
-     * @param  string              $method HTTP请求方法
+     * @param string $uri 请求URI
+     * @param string $method HTTP请求方法
      * @return RouteObject         匹配的路由对象
      * @throws ControllerException 当路由未找到时抛出异常
      */
@@ -210,9 +191,59 @@ class Route extends NovaApp
     }
 
     /**
+     * 移除URI中的查询字符串变量
+     * 同时处理/public和/index.php前缀
+     *
+     * @param string $uri 原始URI
+     * @return string 处理后的URI
+     */
+    private function removeQueryStringVariables(string $uri): string
+    {
+        $raw = $uri;
+
+        // URI净化
+        $uri = filter_var($uri, FILTER_SANITIZE_URL);
+
+        // 移除查询字符串
+        $parts = explode('?', $uri, 2);
+        if (count($parts) > 1) {
+            $uri = $parts[0];
+        }
+
+        // 规范化路径
+        $uri = '/' . trim($uri, '/');
+
+        if (str_starts_with($uri, "/public")) {
+            $uri = substr($uri, 7);
+            Logger::warning("Don't use /public in uri: $uri, it's unsafe. Please use nginx or apache to set root path.");
+        }
+
+        if (str_starts_with($uri, "/index.php")) {
+            $uri = substr($uri, 10);
+        }
+
+        $this->root = Context::instance()->request()->getBasicAddress() . str_replace($uri, "", $raw);
+        Logger::debug("Route removeQueryStringVariables: $uri");
+
+        return $uri;
+    }
+
+    /**
+     * 获取Route类的单例实例
+     *
+     * @return self Route类实例
+     */
+    public static function getInstance(): self
+    {
+        return Context::instance()->getOrCreateInstance("Route", function () {
+            return new Route();
+        });
+    }
+
+    /**
      * 查找匹配的路由
      *
-     * @param  string           $method HTTP请求方法
+     * @param string $method HTTP请求方法
      * @return RouteObject|null 返回匹配的路由对象，如果未找到则返回null
      */
     private function findMatchingRoute(string $method): ?RouteObject
@@ -248,34 +279,10 @@ class Route extends NovaApp
         return null;
     }
 
-    public function getUri(): string
-    {
-        return $this->uri;
-    }
-
-
-
-    /**
-     * 获取所有注册的路由
-     * 如果配置了默认路由，会添加默认的模块/控制器/动作路由
-     *
-     * @return array 路由数组
-     */
-    private function getRoutes(): array
-    {
-        $routes = $this->routes;
-        if (config('default_route') ?? false) {
-            $defaultRoute = route("{module}", "{controller}", "{action}");
-            $routes["/{module}/{controller}/{action}"] = $defaultRoute;
-            $this->routeIndex['ANY']["/{module}/{controller}/{action}"] = $defaultRoute;
-        }
-        return $routes;
-    }
-
     /**
      * 构建路由正则表达式规则
      *
-     * @param  string $key 路由规则
+     * @param string $key 路由规则
      * @return string 转换后的正则表达式
      */
     private function buildRegexRule(string $key): string
@@ -285,10 +292,10 @@ class Route extends NovaApp
         }
 
         $rule = '@^' . str_ireplace(
-            ['\\\\', '.', '/', '@number}', '@word}', '{', '}'],
-            ['', '\.', '\/', '>\d+)', '>\w+)', '(?P<', '>.+?)'],
-            strtolower($key)
-        ) . '$@ui';
+                ['\\\\', '.', '/', '@number}', '@word}', '{', '}'],
+                ['', '\.', '\/', '>\d+)', '>\w+)', '(?P<', '>.+?)'],
+                strtolower($key)
+            ) . '$@ui';
 
         self::$ruleCache[$key] = $rule;
         return $rule;
@@ -308,42 +315,9 @@ class Route extends NovaApp
         }
     }
 
-    /**
-     * 移除URI中的查询字符串变量
-     * 同时处理/public和/index.php前缀
-     *
-     * @param  string $uri 原始URI
-     * @return string 处理后的URI
-     */
-    private function removeQueryStringVariables(string $uri): string
+    public function getUri(): string
     {
-        $raw = $uri;
-
-        // URI净化
-        $uri = filter_var($uri, FILTER_SANITIZE_URL);
-
-        // 移除查询字符串
-        $parts = explode('?', $uri, 2);
-        if (count($parts) > 1) {
-            $uri = $parts[0];
-        }
-
-        // 规范化路径
-        $uri = '/' . trim($uri, '/');
-
-        if (str_starts_with($uri, "/public")) {
-            $uri = substr($uri, 7);
-            Logger::warning("Don't use /public in uri: $uri, it's unsafe. Please use nginx or apache to set root path.");
-        }
-
-        if (str_starts_with($uri, "/index.php")) {
-            $uri = substr($uri, 10);
-        }
-
-        $this->root = Context::instance()->request()->getBasicAddress() . str_replace($uri, "", $raw);
-        Logger::debug("Route removeQueryStringVariables: $uri");
-
-        return $uri;
+        return $this->uri;
     }
 
     /**
@@ -362,5 +336,22 @@ class Route extends NovaApp
     public function clearCache(): void
     {
         self::$ruleCache = [];
+    }
+
+    /**
+     * 获取所有注册的路由
+     * 如果配置了默认路由，会添加默认的模块/控制器/动作路由
+     *
+     * @return array 路由数组
+     */
+    private function getRoutes(): array
+    {
+        $routes = $this->routes;
+        if (config('default_route') ?? false) {
+            $defaultRoute = route("{module}", "{controller}", "{action}");
+            $routes["/{module}/{controller}/{action}"] = $defaultRoute;
+            $this->routeIndex['ANY']["/{module}/{controller}/{action}"] = $defaultRoute;
+        }
+        return $routes;
     }
 }

@@ -43,24 +43,6 @@ class App extends NovaApp
     ];
 
     /**
-     * 获取App实例
-     * 如果存在自定义的Application类并实现了App接口，则返回自定义Application实例
-     * 否则返回默认App实例
-     *
-     * @return App 返回应用程序实例
-     */
-    public static function getInstance(): App
-    {
-        return Context::instance()->getOrCreateInstance("App", function () {
-            $applicationClazz = "app\\Application";
-            if (class_exists($applicationClazz) && is_subclass_of($applicationClazz, App::class)) {
-                return new $applicationClazz();
-            }
-            return new App();
-        });
-    }
-
-    /**
      * 启动应用程序
      * 处理整个应用程序的生命周期，包括：
      * 1. 框架初始化
@@ -99,6 +81,13 @@ class App extends NovaApp
     }
 
     /**
+     * 框架启动时的钩子方法
+     */
+    protected function onFrameworkStart()
+    {
+    }
+
+    /**
      * 处理路由
      * @throws ControllerException
      */
@@ -112,10 +101,36 @@ class App extends NovaApp
     }
 
     /**
+     * 获取App实例
+     * 如果存在自定义的Application类并实现了App接口，则返回自定义Application实例
+     * 否则返回默认App实例
+     *
+     * @return App 返回应用程序实例
+     */
+    public static function getInstance(): App
+    {
+        return Context::instance()->getOrCreateInstance("App", function () {
+            $applicationClazz = "app\\Application";
+            if (class_exists($applicationClazz) && is_subclass_of($applicationClazz, App::class)) {
+                return new $applicationClazz();
+            }
+            return new App();
+        });
+    }
+
+    /**
+     * 路由解析完成时的钩子方法
+     * @param RouteObject|null $route 路由对象
+     */
+    protected function onRoute(?RouteObject $route)
+    {
+    }
+
+    /**
      * 处理请求
      * 设置路由信息到请求对象中，触发应用启动事件，并执行路由
      *
-     * @param  RouteObject      $route 路由对象
+     * @param RouteObject $route 路由对象
      * @throws AppExitException
      */
     private function processRequest(RouteObject $route): void
@@ -125,6 +140,24 @@ class App extends NovaApp
         $this->onAppStart();
         EventManager::trigger("app.start", $request);
         $route->run();
+    }
+
+    /**
+     * 应用启动时的钩子方法
+     */
+    protected function onAppStart()
+    {
+    }
+
+    /**
+     * 处理AppExit异常
+     */
+    private function handleAppExit(AppExitException $exception): void
+    {
+        Logger::info("App Exit Exception", ['message' => $exception->getMessage()]);
+        $this->sendResponse($exception->response());
+        $this->onAppEnd();
+        EventManager::trigger("app.end", $this);
     }
 
     /**
@@ -150,15 +183,25 @@ class App extends NovaApp
         }
     }
 
-    /**
-     * 处理AppExit异常
-     */
-    private function handleAppExit(AppExitException $exception): void
+    private function printException(\Exception|\Error $e): void
     {
-        Logger::info("App Exit Exception", ['message' => $exception->getMessage()]);
-        $this->sendResponse($exception->response());
-        $this->onAppEnd();
-        EventManager::trigger("app.end", $this);
+        if ($this->context->isDebug()) {
+            echo "<pre>";
+            echo "<h2>Exception: " . $e->getMessage() . "</h2><br>";
+            echo "File: " . $e->getFile() . ":" . $e->getLine() . "<br>";
+            echo "Trace: <br>";
+            echo $e->getTraceAsString();
+            echo "</pre>";
+        } else {
+            echo "<h2>An error occurred, please try again later.</h2>";
+        }
+    }
+
+    /**
+     * 应用结束时的钩子方法
+     */
+    protected function onAppEnd()
+    {
     }
 
     /**
@@ -176,6 +219,40 @@ class App extends NovaApp
         }
 
         $this->sendResponse($response);
+    }
+
+    /**
+     * 路由未找到时的钩子方法
+     * @param RouteObject|null $route 路由对象
+     * @param string $uri 请求URI
+     * @return Response|null    自定义的错误响应
+     */
+    protected function onRouteNotFound(?RouteObject $route, string $uri): ?Response
+    {
+        return null;
+    }
+
+    /**
+     * 创建错误响应
+     * 根据是否处于调试模式返回不同的错误响应：
+     * - 调试模式：返回详细的异常信息
+     * - 生产模式：返回配置的错误页面
+     *
+     * @param int $statusCode HTTP状态码
+     * @return Response 错误响应对象
+     */
+    private function createErrorResponse(int $statusCode, Throwable $exception): Response
+    {
+        if ($this->context->isDebug()) {
+            return ErrorHandler::getExceptionResponse($exception);
+        }
+
+        $errorTemplate = ROOT_PATH . self::ERROR_TEMPLATES[$statusCode];
+        return Response::asHtml(
+            file_get_contents($errorTemplate),
+            [],
+            $statusCode
+        );
     }
 
     /**
@@ -199,26 +276,13 @@ class App extends NovaApp
     }
 
     /**
-     * 创建错误响应
-     * 根据是否处于调试模式返回不同的错误响应：
-     * - 调试模式：返回详细的异常信息
-     * - 生产模式：返回配置的错误页面
-     *
-     * @param  int      $statusCode HTTP状态码
-     * @return Response 错误响应对象
+     * 应用发生错误时的钩子方法
+     * @param string $uri 请求URI
+     * @return Response|null 自定义的错误响应
      */
-    private function createErrorResponse(int $statusCode, Throwable $exception): Response
+    protected function onApplicationError(string $uri): ?Response
     {
-        if ($this->context->isDebug()) {
-            return  ErrorHandler::getExceptionResponse($exception);
-        }
-
-        $errorTemplate = ROOT_PATH . self::ERROR_TEMPLATES[$statusCode];
-        return Response::asHtml(
-            file_get_contents($errorTemplate),
-            [],
-            $statusCode
-        );
+        return null;
     }
 
     /**
@@ -243,73 +307,9 @@ class App extends NovaApp
     }
 
     /**
-     * 框架启动时的钩子方法
-     */
-    protected function onFrameworkStart()
-    {
-    }
-
-    /**
-     * 路由解析完成时的钩子方法
-     * @param RouteObject|null $route 路由对象
-     */
-    protected function onRoute(?RouteObject $route)
-    {
-    }
-
-    /**
-     * 应用启动时的钩子方法
-     */
-    protected function onAppStart()
-    {
-    }
-
-    /**
-     * 路由未找到时的钩子方法
-     * @param  RouteObject|null $route 路由对象
-     * @param  string           $uri   请求URI
-     * @return Response|null    自定义的错误响应
-     */
-    protected function onRouteNotFound(?RouteObject $route, string $uri): ?Response
-    {
-        return null;
-    }
-
-    /**
      * 框架结束时的钩子方法
      */
     protected function onFrameworkEnd()
     {
-    }
-
-    /**
-     * 应用结束时的钩子方法
-     */
-    protected function onAppEnd()
-    {
-    }
-
-    /**
-     * 应用发生错误时的钩子方法
-     * @param  string        $uri 请求URI
-     * @return Response|null 自定义的错误响应
-     */
-    protected function onApplicationError(string $uri): ?Response
-    {
-        return null;
-    }
-
-    private function printException(\Exception|\Error $e): void
-    {
-        if ($this->context->isDebug()) {
-            echo "<pre>";
-            echo "<h2>Exception: " . $e->getMessage() . "</h2><br>";
-            echo "File: " . $e->getFile() . ":" . $e->getLine() . "<br>";
-            echo "Trace: <br>";
-            echo $e->getTraceAsString();
-            echo "</pre>";
-        } else {
-            echo "<h2>An error occurred, please try again later.</h2>";
-        }
     }
 }

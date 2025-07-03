@@ -44,13 +44,39 @@ class ErrorHandler
     }
 
     /**
+     * 处理PHP错误
+     *
+     * 将PHP错误转换为异常，统一错误处理流程
+     *
+     * @param int $errno 错误级别
+     * @param string $err_str 错误信息
+     * @param string $err_file 错误文件
+     * @param int $err_line 错误行号
+     * @return bool             是否处理了错误
+     * @throws AppExitException
+     */
+    public static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): bool
+    {
+        $str = match ($errno) {
+            E_WARNING => "WARNING",
+            E_NOTICE => "NOTICE",
+            E_STRICT => "STRICT",
+            8192 => "DEPRECATED",
+            default => "ERROR"
+        };
+
+        self::appException(new ErrorException("$str: $err_str in $err_file on line $err_line"));
+        return true;
+    }
+
+    /**
      * 处理应用异常
      *
      * 根据环境配置决定是否显示详细错误信息：
      * - 开发环境：显示详细的错误信息和调用栈
      * - 生产环境：显示友好的错误页面
      *
-     * @param  Throwable        $e 捕获的异常
+     * @param Throwable $e 捕获的异常
      * @throws AppExitException 当需要中断应用执行时
      */
     public static function appException(Throwable $e): void
@@ -80,7 +106,7 @@ class ErrorHandler
     /**
      * 生成异常响应
      *
-     * @param  Throwable $e 需要处理的异常
+     * @param Throwable $e 需要处理的异常
      * @return Response  包含错误信息的响应对象
      */
     public static function getExceptionResponse(Throwable $e): Response
@@ -99,7 +125,7 @@ class ErrorHandler
      * - 请求信息
      * - 服务器环境信息
      *
-     * @param  Throwable $exception 需要处理的异常
+     * @param Throwable $exception 需要处理的异常
      * @return string    格式化的HTML错误页面
      */
     private static function customExceptionHandler(Throwable $exception): string
@@ -212,7 +238,7 @@ class ErrorHandler
             // 添加代码内容
             $TEMPLATE_CONTAINER .= "<div id=\"file{$key}\">";
             foreach ($sourceLine as $line) {
-                $TEMPLATE_CONTAINER .= "<div class=\"code-line\">" . $line. "</div>";
+                $TEMPLATE_CONTAINER .= "<div class=\"code-line\">" . $line . "</div>";
             }
             $TEMPLATE_CONTAINER .= "</div>";
         }
@@ -228,9 +254,91 @@ class ErrorHandler
     }
 
     /**
+     * 获取错误文件的相关代码行
+     *
+     * @param string $file 文件路径
+     * @param int $line 行号，-1表示使用关键字查找
+     * @param string $msg 关键字
+     * @return array  包含行号和代码行的数组
+     */
+    public static function errorFile(string $file, int $line = -1, string $msg = ""): array
+    {
+        $lineCount = 15; // 上下文行数
+
+        if (!(file_exists($file) && is_file($file))) {
+            return [];
+        }
+
+        $data = file($file);
+        if ($data === false) {
+            return [];
+        }
+
+        $count = count($data) - 1;
+        $returns = [];
+
+        // 如果未指定行号，通过关键字查找
+        if ($line == -1) {
+            for ($i = 0; $i <= $count; $i++) {
+                if (str_contains($data[$i], $msg)) {
+                    $line = $i + 1;
+                    break;
+                }
+            }
+        }
+
+        $returns["line"] = $line;
+
+        // 计算显示范围
+        $start = max(1, $line - $lineCount);
+        $end = min($count + 1, $line + $lineCount);
+
+        // 生成代码行HTML
+        for ($i = $start; $i <= $end; $i++) {
+            $number = '<span class="ln-num" data-num="' . $i . '"></span>';
+
+            if ($i == $line) {
+                $returns[] = "<span id='current'>" . $number . self::highlightCode($data[$i - 1]) . "</span>";
+            } else {
+                $returns[] = $number . self::highlightCode($data[$i - 1]);
+            }
+        }
+
+        return $returns;
+    }
+
+    /**
+     * 代码高亮处理
+     *
+     * @param string $code 需要高亮的代码
+     * @return string 高亮后的HTML
+     */
+    private static function highlightCode(string $code): string
+    {
+        // 处理注释标记，避免highlight_string解析错误
+        $code = preg_replace('/(\/\*\*)/', '///**', $code);
+        $code = preg_replace('/(\s\*)[^\/]/', '//*', $code);
+        $code = preg_replace('/(\*\/)/', '//*/', $code);
+
+        // 高亮处理
+        if (preg_match('/<\?(php)?[^[:graph:]]/i', $code)) {
+            $return = highlight_string($code, true);
+        } else {
+            $return = preg_replace(
+                '/(&lt;\?php)+/i',
+                "",
+                highlight_string("<?php " . $code, true)
+            );
+        }
+
+        // 还原注释标记
+        return str_replace(['//*/', '///**', '//*'], ['*/', '/**', '*'], $return);
+    }
+
+    /**
      * 添加请求相关信息到错误模板
      *
-     * @param  string $tpl 错误模板
+     * @param string $tpl 错误模板
      * @return string 更新后的模板
      */
     private static function addRequestInfo(string $tpl): string
@@ -285,113 +393,5 @@ class ErrorHandler
             $REQUEST_ROUTING,
             $REQUEST_SERVER
         ], $tpl);
-    }
-
-    /**
-     * 获取错误文件的相关代码行
-     *
-     * @param  string $file 文件路径
-     * @param  int    $line 行号，-1表示使用关键字查找
-     * @param  string $msg  关键字
-     * @return array  包含行号和代码行的数组
-     */
-    public static function errorFile(string $file, int $line = -1, string $msg = ""): array
-    {
-        $lineCount = 15; // 上下文行数
-
-        if (!(file_exists($file) && is_file($file))) {
-            return [];
-        }
-
-        $data = file($file);
-        if ($data === false) {
-            return [];
-        }
-
-        $count = count($data) - 1;
-        $returns = [];
-
-        // 如果未指定行号，通过关键字查找
-        if ($line == -1) {
-            for ($i = 0; $i <= $count; $i++) {
-                if (str_contains($data[$i], $msg)) {
-                    $line = $i + 1;
-                    break;
-                }
-            }
-        }
-
-        $returns["line"] = $line;
-
-        // 计算显示范围
-        $start = max(1, $line - $lineCount);
-        $end = min($count + 1, $line + $lineCount);
-
-        // 生成代码行HTML
-        for ($i = $start; $i <= $end; $i++) {
-            $number = '<span class="ln-num" data-num="' . $i . '"></span>';
-
-            if ($i == $line) {
-                $returns[] = "<span id='current'>" . $number . self::highlightCode($data[$i - 1]) . "</span>";
-            } else {
-                $returns[] = $number . self::highlightCode($data[$i - 1]);
-            }
-        }
-
-        return $returns;
-    }
-
-    /**
-     * 代码高亮处理
-     *
-     * @param  string $code 需要高亮的代码
-     * @return string 高亮后的HTML
-     */
-    private static function highlightCode(string $code): string
-    {
-        // 处理注释标记，避免highlight_string解析错误
-        $code = preg_replace('/(\/\*\*)/', '///**', $code);
-        $code = preg_replace('/(\s\*)[^\/]/', '//*', $code);
-        $code = preg_replace('/(\*\/)/', '//*/', $code);
-
-        // 高亮处理
-        if (preg_match('/<\?(php)?[^[:graph:]]/i', $code)) {
-            $return = highlight_string($code, true);
-        } else {
-            $return = preg_replace(
-                '/(&lt;\?php)+/i',
-                "",
-                highlight_string("<?php " . $code, true)
-            );
-        }
-
-        // 还原注释标记
-        return str_replace(['//*/', '///**', '//*'], ['*/', '/**', '*'], $return);
-    }
-
-    /**
-     * 处理PHP错误
-     *
-     * 将PHP错误转换为异常，统一错误处理流程
-     *
-     * @param  int              $errno    错误级别
-     * @param  string           $err_str  错误信息
-     * @param  string           $err_file 错误文件
-     * @param  int              $err_line 错误行号
-     * @return bool             是否处理了错误
-     * @throws AppExitException
-     */
-    public static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): bool
-    {
-        $str = match ($errno) {
-            E_WARNING => "WARNING",
-            E_NOTICE => "NOTICE",
-            E_STRICT => "STRICT",
-            8192 => "DEPRECATED",
-            default => "ERROR"
-        };
-
-        self::appException(new ErrorException("$str: $err_str in $err_file on line $err_line"));
-        return true;
     }
 }
