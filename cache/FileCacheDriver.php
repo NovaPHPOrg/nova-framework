@@ -146,16 +146,16 @@ class FileCacheDriver implements iCacheDriver
     private function maybeGc(): void
     {
         if (mt_rand(1, 500) === 1) {
-            $this->gc(500);
+            $this->gc($this->baseDir,1000);
         }
     }
 
     /** 仅读取文件头 10 字节判断是否过期 */
-    private function gc(int $limit = 0): void
+     function gc(string $startKey,int $maxCount): void
     {
         $now  = time();
         $iter = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($this->baseDir, \FilesystemIterator::SKIP_DOTS)
+            new \RecursiveDirectoryIterator($this->baseDir.DS.$startKey, \FilesystemIterator::SKIP_DOTS)
         );
 
         $n = 0;
@@ -173,7 +173,7 @@ class FileCacheDriver implements iCacheDriver
 
             if ($expire !== 0 && $expire < $now) {
                 @unlink($path);
-                if ($limit && ++$n >= $limit) {
+                if ($maxCount && ++$n >= $maxCount) {
                     break;
                 }
             }

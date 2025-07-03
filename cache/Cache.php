@@ -109,4 +109,9 @@ class Cache
     {
         return $this->driver->getTtl($key);
     }
+
+    public function gc($startKey)
+    {
+        return $this->driver->gc($startKey,1000);
+    }
 }

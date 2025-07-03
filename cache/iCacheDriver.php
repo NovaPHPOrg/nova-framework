@@ -67,4 +67,7 @@ interface iCacheDriver
      * @return int    剩余生存时间（秒），如果键不存在则返回 -1，如果键存在但没有过期时间则返回 -2
      */
     public function getTtl(string $key): int;
+
+
+    public function gc(string $startKey,int $maxCount);
 }
