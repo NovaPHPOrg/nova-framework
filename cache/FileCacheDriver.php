@@ -1,255 +1,204 @@
 <?php
-
 /*
- * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
- * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
- * Etiam sed turpis ac ipsum condimentum fringilla. Maecenas magna.
- * Proin dapibus sapien vel ante. Aliquam erat volutpat. Pellentesque sagittis ligula eget metus.
- * Vestibulum commodo. Ut rhoncus gravida arcu.
+ * Copyright (c) 2025.
+ * 文件缓存驱动：前 10 字节存放过期时间戳；0 视为永不过期。
+ * 读取/写入均加锁；随机 GC（默认 0.1 % 概率）仅扫描时间戳，效率极高。
  */
 
 declare(strict_types=1);
 
 namespace nova\framework\cache;
 
-/**
- * 文件缓存驱动类
- * 实现基于文件系统的缓存存储机制
- */
 class FileCacheDriver implements iCacheDriver
 {
-    /** @var string 缓存文件的基础目录路径 */
+    /** @var string 缓存目录 */
     private string $baseDir;
 
     /**
-     * 构造函数
-     * @param bool $shared 是否共享缓存（预留参数）
+     * @param bool $shared 预留参数
      */
-    public function __construct($shared = false)
+    public function __construct(bool $shared = false)
     {
-        $this->baseDir = ROOT_PATH . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR;
+        $this->baseDir = ROOT_PATH . '/runtime/cache/';
         if (!is_dir($this->baseDir)) {
             mkdir($this->baseDir, 0777, true);
         }
     }
 
-    /**
-     * 获取缓存值
-     * @param string $key 缓存键
-     * @param mixed $default 默认值
-     * @return mixed  缓存值或默认值
-     */
-    public function get($key, $default = null): mixed
+    /* ===================== 对外接口 ===================== */
+
+    public function get(string $key, mixed $default = null): mixed
     {
+        $this->maybeGc();                       // 概率 GC
+
         $file = $this->getFilePath($key);
-
-        $data = $this->readFromFile($file);
-        if (is_array($data) && isset($data['expire']) && isset($data['data'])) {
-            if ($data['expire'] == 0 || $data['expire'] > time()) {
-                return $data['data'];
-            }
-            unlink($file); // 文件过期时删除
-        }
-        return $default;
-    }
-
-    /**
-     * 获取完整的缓存文件路径
-     * @param string $key 缓存键
-     * @return string 完整的文件系统路径
-     */
-    private function getFilePath(string $key): string
-    {
-        return $this->baseDir . $this->getKey($key);
-    }
-
-    /**
-     * 生成缓存键的文件路径
-     * @param string $key 原始缓存键
-     * @return string 处理后的文件路径
-     */
-    private function getKey(string $key): string
-    {
-        $keys = explode(DIRECTORY_SEPARATOR, str_replace("/", DIRECTORY_SEPARATOR, $key));
-
-        if (count($keys) < 2) {
-            $keys = ["default", $keys[0]];
+        if (!is_file($file)) {
+            return $default;
         }
 
-        $keys = array_map(fn($key) => substr(md5($key), 8, 6), $keys);
-
-        $subDir = join(DIRECTORY_SEPARATOR, $keys);
-        return $subDir . ".cache";
-    }
-
-    /**
-     * 从文件中读取缓存数据
-     * @param string $file 文件路径
-     * @return array|null 读取的数据，失败返回null
-     */
-    private function readFromFile(string $file): ?array
-    {
-        if (!file_exists($file)) {
-            return null;
+        $fp = @fopen($file, 'r');
+        if (!$fp) {
+            return $default;
         }
 
         try {
-            // 打开文件
-            $fp = fopen($file, 'r');
-            if (!$fp) {
-                return null;
+            if (!flock($fp, LOCK_SH)) {
+                return $default;
             }
 
-            try {
-                // 获取共享锁以确保读取时数据一致性
-                if (!flock($fp, LOCK_SH)) {
-                    return null;
-                }
-
-                // 读取并反序列化数据
-                $content = fread($fp, max(1, filesize($file)));
-                $data = @unserialize($content);
-
-                return is_array($data) ? $data : null;
-            } finally {
-                // 确保释放文件锁和关闭文件句柄
+            // ① 读取 10 字节过期时间戳
+            $expire = (int)fread($fp, 10);
+            if ($expire !== 0 && $expire < time()) {
                 flock($fp, LOCK_UN);
                 fclose($fp);
+                @unlink($file);                // 已过期，立即删除
+                return $default;
             }
-        } catch (\Exception $e) {
-            return null;
+
+            // ② 读取真实内容
+            $value = @unserialize(stream_get_contents($fp));
+            return ($value === false) ? $default : $value;
+
+        } finally {
+            flock($fp, LOCK_UN);
+            fclose($fp);
         }
     }
 
-    /**
-     * 设置缓存值
-     * @param string $key 缓存键
-     * @param mixed $value 缓存值
-     * @param int $expire 过期时间（秒）
-     */
-    public function set($key, $value, $expire): void
+    public function set(string $key, mixed $value, ?int $expire): bool
     {
+        $this->maybeGc();                       // 概率 GC
+
         $file = $this->getFilePath($key);
-        $subDir = dirname($file);
-        if (!is_dir($subDir)) {
-            try {
-                mkdir($subDir, 0777, true);
-            } catch (\Exception $e) {
-            }
+        if (!is_dir($dir = dirname($file))) {
+            mkdir($dir, 0777, true);
         }
 
-        $this->writeToFile($file, [
-            'expire' => $expire == 0 ? 0 : time() + $expire,
-            'data' => $value
-        ]);
-    }
+        $fp = @fopen($file, 'w');
+        if (!$fp) {
+            return false;
+        }
 
-    /**
-     * 将数据写入缓存文件
-     * @param string $file 文件路径
-     * @param array $data 要写入的数据
-     * @return void   写入是否成功
-     */
-    private function writeToFile(string $file, array $data): void
-    {
         try {
-            // 确保目录存在
-            $dir = dirname($file);
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
+            if (!flock($fp, LOCK_EX)) {
+                return false;
             }
 
-            // 打开文件用于写入
-            $fp = fopen($file, 'w+');
-            if (!$fp) {
-                return;
-            }
-
-            try {
-                // 获取排他锁以确保写入时的数据一致性
-                if (!flock($fp, LOCK_EX)) {
-                    return;
-                }
-
-                // 序列化数据并写入文件
-                fwrite($fp, serialize($data)) !== false;
-                return;
-            } finally {
-                // 确保释放文件锁和关闭文件句柄
-                flock($fp, LOCK_UN);
-                fclose($fp);
-            }
-        } catch (\Exception $e) {
-            return;
+            $ttl = (int)$expire;
+            $ts  = $ttl === 0 ? 0 : time() + $ttl;   // 0 = 永不过期
+            fwrite($fp, sprintf('%010d', $ts));      // 固定 10 字节
+            fwrite($fp, serialize($value));
+        } finally {
+            flock($fp, LOCK_UN);
+            fclose($fp);
         }
+        return true;
     }
 
-    /**
-     * 删除指定的缓存项
-     * @param string $key 缓存键
-     */
-    public function delete($key): void
+    public function delete(string $key): bool
     {
         $file = $this->getFilePath($key);
-        if (file_exists($file)) {
-            unlink($file);
+        if (is_file($file)) {
+            @unlink($file);
         }
+        return true;
     }
 
-    /**
-     * 清空所有缓存
-     */
-    public function clear(): void
+    public function clear(): bool
     {
         $this->deleteDirectory($this->baseDir);
+        return true;
     }
 
-    /**
-     * 递归删除目录及其内容
-     * @param string $dir 要删除的目录路径
-     */
-    private function deleteDirectory(string $dir): void
+    public function deleteKeyStartWith(string $key): bool
     {
-        if (is_dir($dir)) {
-            $files = array_diff(scandir($dir), ['.', '..']);
-            foreach ($files as $file) {
-                $filePath = $dir . DIRECTORY_SEPARATOR . $file;
-                (is_dir($filePath)) ? $this->deleteDirectory($filePath) : unlink($filePath);
-            }
-            rmdir($dir);
-        }
-    }
-
-    /**
-     * 删除指定前缀的所有缓存项
-     * @param string $key 缓存键前缀
-     */
-    public function deleteKeyStartWith($key): void
-    {
-        $dir = $this->baseDir . $this->getKey($key);
-        $dir = str_replace(".cache", "", $dir);
+        $dir = dirname($this->getFilePath($key));
         if (is_dir($dir)) {
             $this->deleteDirectory($dir);
         }
+        return true;
     }
 
-    /**
-     * 获取缓存项的剩余生存时间（TTL）
-     * @param string $key 缓存键
-     * @return int    剩余秒数，0表示永不过期，-1表示已过期或不存在
-     */
-    public function getTtl($key): int
+    public function getTtl(string $key): int
     {
         $file = $this->getFilePath($key);
-        if (file_exists($file)) {
-            $data = $this->readFromFile($file);
-            if (is_array($data) && isset($data['expire'])) {
-                if ($data['expire'] == 0) {
-                    return 0;
+        if (!is_file($file)) {
+            return -1;
+        }
+
+        $fp = @fopen($file, 'r');
+        if (!$fp) {
+            return -1;
+        }
+
+        $expire = (int)fread($fp, 10);
+        fclose($fp);
+
+        if ($expire === 0) {
+            return 0;                           // 永不过期
+        }
+        return max(-1, $expire - time());
+    }
+
+    /* ===================== 内部辅助 ===================== */
+
+    /** 概率触发 GC（默认 0.1 %） */
+    private function maybeGc(): void
+    {
+        if (mt_rand(1, 500) === 1) {
+            $this->gc(500);
+        }
+    }
+
+    /** 仅读取文件头 10 字节判断是否过期 */
+    private function gc(int $limit = 0): void
+    {
+        $now  = time();
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($this->baseDir, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        $n = 0;
+        foreach ($iter as $fileInfo) {
+            if (!$fileInfo->isFile()) {
+                continue;
+            }
+            $path = $fileInfo->getPathname();
+            $fp   = @fopen($path, 'r');
+            if (!$fp) {
+                continue;
+            }
+            $expire = (int)fread($fp, 10);
+            fclose($fp);
+
+            if ($expire !== 0 && $expire < $now) {
+                @unlink($path);
+                if ($limit && ++$n >= $limit) {
+                    break;
                 }
-                return $data['expire'] - time();
             }
         }
-        return -1;
+    }
+
+    /** 递归删除目录 */
+    private function deleteDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) return;
+        foreach (array_diff(scandir($dir), ['.', '..']) as $f) {
+            $p = $dir . '/' . $f;
+            is_dir($p) ? $this->deleteDirectory($p) : @unlink($p);
+        }
+        @rmdir($dir);
+    }
+
+    /** 生成缓存文件路径（保持原散列规则） */
+    private function getFilePath(string $key): string
+    {
+        $parts = explode('/', str_replace('\\', '/', $key));
+        if (count($parts) < 2) {
+            array_unshift($parts, 'default');
+        }
+        $parts = array_map(fn($k) => substr(md5($k), 8, 6), $parts);
+        return $this->baseDir . implode('/', $parts) . '.cache';
     }
 }
