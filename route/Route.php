@@ -27,8 +27,6 @@ class Route extends NovaApp
 {
     /** @var array 正则规则缓存 */
     private static array $ruleCache = [];
-    /** @var array 存储所有注册的路由 */
-    private array $routes = [];
     /** @var array 按HTTP方法索引的路由缓存 */
     private array $routeIndex = [];
     /** @var string 当前请求的URI */
@@ -76,12 +74,8 @@ class Route extends NovaApp
         $uri = '/' . trim($uri, '/');
 
         if (!empty($method)) {
-            $key = $method . " " . $uri;
-            $this->routes[$key] = $mapper;
-            // 更新路由索引
             $this->routeIndex[$method][$uri] = $mapper;
         } else {
-            $this->routes[$uri] = $mapper;
             $this->routeIndex['ANY'][$uri] = $mapper;
         }
     }
@@ -176,6 +170,13 @@ class Route extends NovaApp
         EventManager::getInstance()->trigger("route.before", $this->uri);
 
         Logger::debug("Route dispatch: $method " . $this->uri);
+
+        if (config('default_route') ?? false) {
+            $this->routeIndex['ANY']["/{module}/{controller}/{action}"] = route("{module}", "{controller}", "{action}");
+            $this->routeIndex['ANY']["/{module}/{controller}"] = route("{module}", "{controller}", "index");
+            $this->routeIndex['ANY']["/{module}"] = route("{module}", "main", "index");
+        }
+
 
         $routeObj = $this->findMatchingRoute($method);
 
@@ -336,22 +337,5 @@ class Route extends NovaApp
     public function clearCache(): void
     {
         self::$ruleCache = [];
-    }
-
-    /**
-     * 获取所有注册的路由
-     * 如果配置了默认路由，会添加默认的模块/控制器/动作路由
-     *
-     * @return array 路由数组
-     */
-    private function getRoutes(): array
-    {
-        $routes = $this->routes;
-        if (config('default_route') ?? false) {
-            $defaultRoute = route("{module}", "{controller}", "{action}");
-            $routes["/{module}/{controller}/{action}"] = $defaultRoute;
-            $this->routeIndex['ANY']["/{module}/{controller}/{action}"] = $defaultRoute;
-        }
-        return $routes;
     }
 }
