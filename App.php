@@ -73,7 +73,7 @@ class App extends NovaApp
      */
     private function initializeFramework(): void
     {
-        Logger::info("App Start");
+        Logger::debug("App Start");
         ErrorHandler::register();
         EventManager::register();
         $this->onFrameworkStart();
@@ -154,7 +154,7 @@ class App extends NovaApp
      */
     private function handleAppExit(AppExitException $exception): void
     {
-        Logger::info("App Exit Exception", ['message' => $exception->getMessage()]);
+        Logger::debug("App Exit Exception", ['message' => $exception->getMessage()]);
         $this->sendResponse($exception->response());
         $this->onAppEnd();
         EventManager::trigger("app.end", $this);
@@ -171,7 +171,7 @@ class App extends NovaApp
         try {
             if ($response) {
                 $response->send();
-                Logger::info("Response sent successfully");
+                Logger::debug("Response sent successfully");
             }
         } catch (Throwable|Error $e) {
             Logger::error("Response send error", [
@@ -209,7 +209,7 @@ class App extends NovaApp
      */
     private function handleControllerException(ControllerException $exception): void
     {
-        Logger::info("Controller Exception", ['message' => $exception->getMessage()]);
+        Logger::debug("Controller Exception", ['message' => $exception->getMessage()]);
         $route = $exception->route();
         $response = $this->onRouteNotFound($route, $_SERVER['REQUEST_URI']);
         EventManager::trigger("route.not.found", $route);
@@ -302,7 +302,7 @@ class App extends NovaApp
             ]);
         }
 
-        Logger::info("App end");
+        Logger::debug("App end");
         // Response::finish();
     }
 

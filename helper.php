@@ -27,7 +27,7 @@ use nova\framework\route\RouteObject;
 function runtime(string $msg): float
 {
     $t = Context::instance()->calcAppTime() * 1000;
-    Logger::info("$msg run in $t ms");
+    Logger::debug("$msg run in $t ms");
     return $t;
 }
 

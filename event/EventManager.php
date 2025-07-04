@@ -131,7 +131,7 @@ class EventManager
 
         foreach ($list as $key => $event) {
             // 记录事件触发的日志，包含优先级信息
-            Logger::info("Event: $event_name, level: $key");
+            Logger::debug("Event: $event_name, level: $key");
             $results[$key] = $event($event_name, $data);
 
             // 当返回 false 或在 $once 模式下获得非空返回值时终止处理

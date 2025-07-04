@@ -123,7 +123,7 @@ class Response extends NovaApp
     public function withFile(string $filePath, string $fileName): void
     {
         $filePath = $this->filterFilePath($filePath);
-        Logger::info("Response file: $filePath");
+        Logger::debug("Response file: $filePath");
         if (file_exists($filePath)) {
             $this->data = $filePath;
             $this->header['Content-Disposition'] = 'attachment; filename="' . $fileName . '"';
@@ -548,7 +548,7 @@ class Response extends NovaApp
     {
         $addr = $this->data;
         $addr = $this->filterFilePath($addr);
-        Logger::info("Response file: $addr");
+        Logger::debug("Response file: $addr");
         // 验证文件是否存在且可读
         if (!file_exists($addr) || !is_readable($addr)) {
             $this->code = 404;
@@ -568,7 +568,7 @@ class Response extends NovaApp
         ) {
             $this->code = 304;
             $this->sendHeaders();
-            Logger::info("File not modified: $addr");
+            Logger::debug("File not modified: $addr");
             return;
         }
 
@@ -589,7 +589,7 @@ class Response extends NovaApp
         if ($this->isHead()) {
             return;
         }
-        Logger::info("Send static file: $addr");
+        Logger::debug("Send static file: $addr");
         // 读取并输出文件内容
         $output = EventManager::trigger("response.static.before", $addr, true);
         if ($output !== true) {
