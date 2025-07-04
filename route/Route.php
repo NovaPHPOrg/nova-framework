@@ -173,6 +173,8 @@ class Route extends NovaApp
 
         if (config('default_route') ?? false) {
             $this->routeIndex['ANY']["/{module}/{controller}/{action}"] = route("{module}", "{controller}", "{action}");
+            $this->routeIndex['ANY']["/{module}/{controller}"] = route("{module}", "{controller}", "index");
+            $this->routeIndex['ANY']["/{module}"] = route("{module}", "main", "index");
         }
 
 
