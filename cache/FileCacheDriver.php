@@ -29,8 +29,7 @@ class FileCacheDriver implements iCacheDriver
 
     public function get(string $key, mixed $default = null): mixed
     {
-        $this->maybeGc();                       // 概率 GC
-
+        $this->maybeGc();
         $file = $this->getFilePath($key);
         if (!is_file($file)) {
             return $default;
@@ -41,29 +40,35 @@ class FileCacheDriver implements iCacheDriver
             return $default;
         }
 
+        $expired = false;
+
         try {
             if (!flock($fp, LOCK_SH)) {
                 return $default;
             }
 
-            // ① 读取 10 字节过期时间戳
+            // ① 读取 10 字节时间戳
             $expire = (int)fread($fp, 10);
             if ($expire !== 0 && $expire < time()) {
-                flock($fp, LOCK_UN);
-                fclose($fp);
-                @unlink($file);                // 已过期，立即删除
+                $expired = true;      // 只做标记
                 return $default;
             }
 
-            // ② 读取真实内容
+            // ② 读取内容
             $value = @unserialize(stream_get_contents($fp));
             return ($value === false) ? $default : $value;
 
         } finally {
-            flock($fp, LOCK_UN);
-            fclose($fp);
+            if (is_resource($fp)) {          // 避免二次 flock/fclose
+                flock($fp, LOCK_UN);
+                fclose($fp);
+            }
+            if ($expired) {                  // 现在安全删除
+                @unlink($file);
+            }
         }
-    }
+
+}
 
     public function set(string $key, mixed $value, ?int $expire): bool
     {
