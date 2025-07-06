@@ -33,7 +33,7 @@ class Cache
      */
     public function __construct(bool $shared = false, ?string $driverClazz = null)
     {
-        $driver = empty($driverClazz) ? config('cache_driver'):$driverClazz;
+        $driver = $driverClazz ?? config('cache_driver');
 
         try {
             if ($driver == null || !class_exists($driver) || !in_array('nova\framework\cache\iCacheDriver', class_implements($driver))) {
