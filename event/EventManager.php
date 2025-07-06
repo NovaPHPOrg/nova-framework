@@ -52,7 +52,7 @@ class EventManager
     {
         $events = config("framework_start");
         if (!is_array($events)) {
-            Logger::warning("Framework start events configuration is not an array");
+            Logger::debug("Framework start events configuration is not an array");
             return;
         }
 
