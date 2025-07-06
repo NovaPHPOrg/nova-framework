@@ -440,24 +440,12 @@ class Logger extends NovaApp
     private function cleanupOldLogs(): void
     {
 
-        $lockFile = $this->logDir . DIRECTORY_SEPARATOR . '.cleanup.lock';
-        $lock = fopen($lockFile, 'c');
+        $threshold = time() - self::LOG_TTL_DAYS * 86400;
 
-        if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
-            return; // 另一进程正在清理
-        }
-
-        try {
-            $threshold = time() - self::LOG_TTL_DAYS * 86400;
-
-            foreach (glob($this->logDir . DIRECTORY_SEPARATOR . '*.log*') as $file) {
-                if (is_file($file) && filemtime($file) < $threshold) {
-                    @unlink($file);
-                }
+        foreach (glob($this->logDir . DIRECTORY_SEPARATOR . '*.log*') as $file) {
+            if (is_file($file) && filemtime($file) < $threshold) {
+                @unlink($file);
             }
-        } finally {
-            flock($lock, LOCK_UN);
-            fclose($lock);
         }
     }
 }
