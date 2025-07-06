@@ -36,24 +36,6 @@ use function nova\framework\isCli;
  */
 class Logger extends NovaApp
 {
-    /**
-     * 日志级别定义，遵循 PSR-3 标准
-     * 数字越小，级别越高
-     */
-    private const array LOG_LEVELS = [
-        'EMERGENCY' => 0, // 系统不可用
-        'ALERT' => 1, // 必须立即采取行动
-        'CRITICAL' => 2, // 危急情况
-        'ERROR' => 3, // 运行时错误
-        'WARNING' => 4, // 警告但不是错误
-        'NOTICE' => 5, // 普通但重要的事件
-        'INFO' => 6, // 感兴趣的事件
-        'DEBUG' => 7  // 详细的调试信息
-    ];
-/** @var int 单个日志文件的最大大小（字节） */
-    private const int MAX_FILE_SIZE = 10 * 1024 * 1024;
-    /** @var int 最大保留的日志文件数量 */
-    private const int MAX_FILES = 5;
     /** @var bool 是否处于调试模式 */
     private bool $debug;
     /** @var resource|false 日志文件句柄 */
@@ -68,7 +50,7 @@ class Logger extends NovaApp
     private int $bufferSize = 100; // 10MB
     /** @var string 日志目录路径 */
     private string $logDir;
-
+    private const int LOG_TTL_DAYS = 180;
     /**
      * 构造函数
      * 初始化日志系统，设置必要的路径和文件
@@ -133,16 +115,13 @@ class Logger extends NovaApp
      * @param string $level 日志级别
      * @param array $context 上下文信息，将被JSON序列化
      */
-    protected function write($message, string $level, array $context = []): void
+    protected function write(mixed $message, string $level, array $context = []): void
     {
-        // 检查日志级别
-        $configLevel = $this->context->config()->get('log_level', self::LOG_LEVELS['DEBUG']);
-        if (self::LOG_LEVELS[$level] > $configLevel) {
-            return;
-        }
+        if (mt_rand(1, 100) === 1) $this->cleanupOldLogs();
+
 
         // 非调试模式下跳过低级别日志
-        if (!$this->debug && in_array($level, ['DEBUG', 'INFO', 'NOTICE'])) {
+        if (!$this->debug && in_array($level, ['DEBUG', 'INFO', 'NOTICE','WARNING'])) {
             return;
         }
 
@@ -230,7 +209,7 @@ class Logger extends NovaApp
      * @param array $context 上下文信息
      * @return string 格式化后的日志字符串
      */
-    private function formatLogMessage($message, string $level, array $caller, array $context): string
+    private function formatLogMessage(mixed $message, string $level, array $caller, array $context): string
     {
         $timestamp = microtime(true);
         $datetime = date('Y-m-d H:i:s', (int)$timestamp);
@@ -436,8 +415,6 @@ class Logger extends NovaApp
 
             // 合并临时日志到主日志文件
             if (file_exists($this->tempFile)) {
-                $this->rotateLogFile();
-
                 $handler = fopen($this->logFile, 'a');
                 if ($handler && flock($handler, LOCK_EX)) {
                     $tmpContent = file_get_contents($this->tempFile);
@@ -456,25 +433,27 @@ class Logger extends NovaApp
         }
     }
 
-    /**
-     * 日志文件轮转
-     * 当日志文件超过最大大小时，进行文件轮转
-     * 例如：log.txt -> log.txt.1 -> log.txt.2 -> ...
-     */
-    private function rotateLogFile(): void
+    private function cleanupOldLogs(): void
     {
-        if (!file_exists($this->logFile) || filesize($this->logFile) < self::MAX_FILE_SIZE) {
-            return;
+
+        $lockFile = $this->logDir . DIRECTORY_SEPARATOR . '.cleanup.lock';
+        $lock = fopen($lockFile, 'c');
+
+        if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
+            return; // 另一进程正在清理
         }
 
-        for ($i = self::MAX_FILES - 1; $i > 0; $i--) {
-            $oldFile = "{$this->logFile}.{$i}";
-            $newFile = "{$this->logFile}." . ($i + 1);
-            if (file_exists($oldFile)) {
-                rename($oldFile, $newFile);
+        try {
+            $threshold = time() - self::LOG_TTL_DAYS * 86400;
+
+            foreach (glob($this->logDir . DIRECTORY_SEPARATOR . '*.log*') as $file) {
+                if (is_file($file) && filemtime($file) < $threshold) {
+                    @unlink($file);
+                }
             }
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
-
-        rename($this->logFile, "{$this->logFile}.1");
     }
 }
