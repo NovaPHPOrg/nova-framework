@@ -164,6 +164,10 @@ class Logger extends NovaApp
         // 格式化日志消息
         $logMessage = $this->formatLogMessage($message, $level, $caller, $context);
 
+        if(empty(trim($logMessage))){ //数据为空就不写了
+            return;
+        }
+
         // 添加到缓冲区
         $this->buffer[] = $logMessage;
 
