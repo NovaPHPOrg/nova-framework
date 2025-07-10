@@ -155,7 +155,7 @@ class FileCacheDriver implements iCacheDriver
     private function maybeGc(): void
     {
         if (mt_rand(1, 500) === 1) {
-            $this->gc($this->baseDir,1000);
+            $this->gc('',1000);
         }
     }
 
