@@ -104,7 +104,11 @@ class FileCacheDriver implements iCacheDriver
     {
         $file = $this->getFilePath($key);
         if (is_file($file)) {
-            @unlink($file);
+            try {
+                unlink($file);
+            }catch (\Exception $e){
+                return false;
+            }
         }
         return true;
     }
@@ -177,7 +181,9 @@ class FileCacheDriver implements iCacheDriver
             fclose($fp);
 
             if ($expire !== 0 && $expire < $now) {
-                @unlink($path);
+                try {
+                    @unlink($path);
+                }catch (\Exception $e){}
                 if ($maxCount && ++$n >= $maxCount) {
                     break;
                 }
@@ -191,9 +197,14 @@ class FileCacheDriver implements iCacheDriver
         if (!is_dir($dir)) return;
         foreach (array_diff(scandir($dir), ['.', '..']) as $f) {
             $p = $dir . '/' . $f;
-            is_dir($p) ? $this->deleteDirectory($p) : @unlink($p);
+            try {
+                is_dir($p) ? $this->deleteDirectory($p) : @unlink($p);
+            }catch (\Exception $e){}
+
         }
-        @rmdir($dir);
+        try {
+            @rmdir($dir);
+        }catch (\Exception $e){}
     }
 
     /** 生成缓存文件路径（保持原散列规则） */
