@@ -28,7 +28,7 @@ class File
 {
     /**
      * 验证文件名是否合法（不含路径符号）
-     * @param string|null $fileName 文件名
+     * @param  string|null $fileName 文件名
      * @return bool        是否合法
      */
     public static function isValidFileName($fileName): bool
@@ -41,7 +41,7 @@ class File
 
     /**
      * 获取完整路径
-     * @param string ...$path 路径片段
+     * @param  string ...$path 路径片段
      * @return string 完整路径
      */
     public static function path(...$path): string
@@ -51,8 +51,8 @@ class File
 
     /**
      * 递归复制目录
-     * @param string $src 源目录路径
-     * @param string $dest 目标目录路径
+     * @param  string $src  源目录路径
+     * @param  string $dest 目标目录路径
      * @return bool   是否复制成功
      */
     public static function copyDirectory($src, $dest): bool
@@ -106,7 +106,7 @@ class File
 
     /**
      * 递归创建目录
-     * @param string $dir 目录路径
+     * @param  string $dir 目录路径
      * @return bool   是否创建成功
      */
     public static function mkDir($dir): bool
@@ -128,7 +128,7 @@ class File
 
     /**
      * 检测文件或目录是否存在
-     * @param string $path 路径
+     * @param  string $path 路径
      * @return bool   是否存在
      */
     public static function exists($path): bool
@@ -138,8 +138,8 @@ class File
 
     /**
      * 复制文件
-     * @param string $src 源文件路径
-     * @param string $dest 目标文件路径
+     * @param  string $src  源文件路径
+     * @param  string $dest 目标文件路径
      * @return bool   是否复制成功
      */
     public static function copyFile($src, $dest): bool
@@ -158,7 +158,7 @@ class File
 
     /**
      * 获取文件名（不含扩展名）
-     * @param string $path 文件路径
+     * @param  string $path 文件路径
      * @return string 文件名
      */
     public static function fileName($path): string
@@ -168,7 +168,7 @@ class File
 
     /**
      * 获取文件扩展名
-     * @param string $path 文件路径
+     * @param  string $path 文件路径
      * @return string 文件扩展名
      */
     public static function ext($path): string
@@ -178,8 +178,8 @@ class File
 
     /**
      * 写入文件内容
-     * @param string $file 文件路径
-     * @param string $body 文件内容
+     * @param  string     $file 文件路径
+     * @param  string     $body 文件内容
      * @throws \Exception 写入失败时抛出异常
      */
     public static function write(string $file, string $body): void
@@ -198,7 +198,7 @@ class File
 
     /**
      * 删除文件或目录
-     * @param string $dir 文件或目录路径
+     * @param  string     $dir 文件或目录路径
      * @throws \Exception 删除失败时抛出异常
      */
     public static function del(string $dir): void

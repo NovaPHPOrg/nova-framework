@@ -21,8 +21,8 @@ class Text
     /**
      * 将字符串转换为指定编码（默认UTF-8）
      *
-     * @param mixed $text 需要转换的文本
-     * @param string $encode_code 目标编码，默认为"UTF-8"
+     * @param  mixed  $text        需要转换的文本
+     * @param  string $encode_code 目标编码，默认为"UTF-8"
      * @return string 转换后的文本
      *
      * @example
@@ -41,8 +41,8 @@ class Text
      * 根据样例值的类型，将数据转换为相应的类型
      * 如果转换失败，将返回样例值
      *
-     * @param mixed $sample 样例值，用于确定目标类型
-     * @param mixed $data 需要转换的数据
+     * @param  mixed $sample 样例值，用于确定目标类型
+     * @param  mixed $data   需要转换的数据
      * @return mixed 转换后的数据，转换失败时返回样例值
      *
      * @example

@@ -27,8 +27,8 @@ class AppExitException extends Exception
 
     /**
      * 构造函数
-     * @param mixed $response 需要返回的响应
-     * @param string $message 异常信息
+     * @param mixed  $response 需要返回的响应
+     * @param string $message  异常信息
      */
     public function __construct($response, $message = "App Exit")
     {

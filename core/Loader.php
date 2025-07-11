@@ -141,10 +141,10 @@ class Loader
         foreach ($namespace as $prefix => $replace) {
             // 将类名转换为文件路径
             $realClass = str_replace(
-                    "\\",
-                    DIRECTORY_SEPARATOR,
-                    str_replace($prefix, $replace, $raw)
-                ) . ".php";
+                "\\",
+                DIRECTORY_SEPARATOR,
+                str_replace($prefix, $replace, $raw)
+            ) . ".php";
             $file = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . $realClass;
 
             // 如果文件存在，则加载并缓存

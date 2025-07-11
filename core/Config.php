@@ -82,7 +82,7 @@ class Config
      * 将新的配置数组合并到现有配置中，支持深度合并
      * 如果目标路径不存在或不是数组，将创建新数组
      *
-     * @param string $path 配置路径，使用点号分隔
+     * @param string               $path  配置路径，使用点号分隔
      * @param array<string, mixed> $value 要合并的配置数组
      *
      * @example
@@ -110,8 +110,8 @@ class Config
      * 获取配置值
      * 支持使用点号分隔的路径访问多层级配置
      *
-     * @param string $path 配置路径，使用点号分隔，如：'db.host'
-     * @param mixed $default 当配置项不存在时返回的默认值
+     * @param  string $path    配置路径，使用点号分隔，如：'db.host'
+     * @param  mixed  $default 当配置项不存在时返回的默认值
      * @return mixed  返回查找到的配置值，如果未找到则返回默认值
      *
      * @example
@@ -141,8 +141,8 @@ class Config
      * 递归合并两个数组
      * 支持深度合并，如果键存在且都是数组则递归合并，否则用新值覆盖
      *
-     * @param array<string, mixed> $original 原始数组
-     * @param array<string, mixed> $new 新数组
+     * @param  array<string, mixed> $original 原始数组
+     * @param  array<string, mixed> $new      新数组
      * @return array<string, mixed> 返回合并后的数组
      */
     private function mergeArrays(array $original, array $new): array
@@ -162,8 +162,8 @@ class Config
      * 支持使用点号分隔的路径设置多层级配置
      * 如果路径中的键不存在，将自动创建对应的数组结构
      *
-     * @param string $path 配置路径，使用点号分隔，如：'db.host'
-     * @param mixed $value 要设置的配置值，可以是任意类型
+     * @param string $path  配置路径，使用点号分隔，如：'db.host'
+     * @param mixed  $value 要设置的配置值，可以是任意类型
      *
      * @example
      * ```php

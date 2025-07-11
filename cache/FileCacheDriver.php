@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (c) 2025.
  * 文件缓存驱动：前 10 字节存放过期时间戳；0 视为永不过期。
@@ -68,7 +69,7 @@ class FileCacheDriver implements iCacheDriver
             }
         }
 
-}
+    }
 
     public function set(string $key, mixed $value, ?int $expire): bool
     {
@@ -106,7 +107,7 @@ class FileCacheDriver implements iCacheDriver
         if (is_file($file)) {
             try {
                 unlink($file);
-            }catch (\Exception $e){
+            } catch (\Exception $e) {
                 return false;
             }
         }
@@ -155,12 +156,12 @@ class FileCacheDriver implements iCacheDriver
     private function maybeGc(): void
     {
         if (mt_rand(1, 500) === 1) {
-            $this->gc('',1000);
+            $this->gc('', 1000);
         }
     }
 
     /** 仅读取文件头 10 字节判断是否过期 */
-     function gc(string $startKey,int $maxCount): void
+    public function gc(string $startKey, int $maxCount): void
     {
         $now  = time();
         $iter = new \RecursiveIteratorIterator(
@@ -183,7 +184,8 @@ class FileCacheDriver implements iCacheDriver
             if ($expire !== 0 && $expire < $now) {
                 try {
                     @unlink($path);
-                }catch (\Exception $e){}
+                } catch (\Exception $e) {
+                }
                 if ($maxCount && ++$n >= $maxCount) {
                     break;
                 }
@@ -194,17 +196,21 @@ class FileCacheDriver implements iCacheDriver
     /** 递归删除目录 */
     private function deleteDirectory(string $dir): void
     {
-        if (!is_dir($dir)) return;
+        if (!is_dir($dir)) {
+            return;
+        }
         foreach (array_diff(scandir($dir), ['.', '..']) as $f) {
             $p = $dir . '/' . $f;
             try {
                 is_dir($p) ? $this->deleteDirectory($p) : @unlink($p);
-            }catch (\Exception $e){}
+            } catch (\Exception $e) {
+            }
 
         }
         try {
             @rmdir($dir);
-        }catch (\Exception $e){}
+        } catch (\Exception $e) {
+        }
     }
 
     /** 生成缓存文件路径（保持原散列规则） */
@@ -214,7 +220,7 @@ class FileCacheDriver implements iCacheDriver
         if (count($parts) < 2) {
             array_unshift($parts, 'default');
         }
-        $parts = array_map(fn($k) => substr(md5($k), 8, 6), $parts);
+        $parts = array_map(fn ($k) => substr(md5($k), 8, 6), $parts);
         return $this->baseDir . implode('/', $parts) . '.cache';
     }
 }

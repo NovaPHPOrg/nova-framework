@@ -48,10 +48,10 @@ class ErrorHandler
      *
      * 将PHP错误转换为异常，统一错误处理流程
      *
-     * @param int $errno 错误级别
-     * @param string $err_str 错误信息
-     * @param string $err_file 错误文件
-     * @param int $err_line 错误行号
+     * @param  int              $errno    错误级别
+     * @param  string           $err_str  错误信息
+     * @param  string           $err_file 错误文件
+     * @param  int              $err_line 错误行号
      * @return bool             是否处理了错误
      * @throws AppExitException
      */
@@ -76,7 +76,7 @@ class ErrorHandler
      * - 开发环境：显示详细的错误信息和调用栈
      * - 生产环境：显示友好的错误页面
      *
-     * @param Throwable $e 捕获的异常
+     * @param  Throwable        $e 捕获的异常
      * @throws AppExitException 当需要中断应用执行时
      */
     public static function appException(Throwable $e): void
@@ -106,7 +106,7 @@ class ErrorHandler
     /**
      * 生成异常响应
      *
-     * @param Throwable $e 需要处理的异常
+     * @param  Throwable $e 需要处理的异常
      * @return Response  包含错误信息的响应对象
      */
     public static function getExceptionResponse(Throwable $e): Response
@@ -125,7 +125,7 @@ class ErrorHandler
      * - 请求信息
      * - 服务器环境信息
      *
-     * @param Throwable $exception 需要处理的异常
+     * @param  Throwable $exception 需要处理的异常
      * @return string    格式化的HTML错误页面
      */
     private static function customExceptionHandler(Throwable $exception): string
@@ -256,9 +256,9 @@ class ErrorHandler
     /**
      * 获取错误文件的相关代码行
      *
-     * @param string $file 文件路径
-     * @param int $line 行号，-1表示使用关键字查找
-     * @param string $msg 关键字
+     * @param  string $file 文件路径
+     * @param  int    $line 行号，-1表示使用关键字查找
+     * @param  string $msg  关键字
      * @return array  包含行号和代码行的数组
      */
     public static function errorFile(string $file, int $line = -1, string $msg = ""): array
@@ -310,7 +310,7 @@ class ErrorHandler
     /**
      * 代码高亮处理
      *
-     * @param string $code 需要高亮的代码
+     * @param  string $code 需要高亮的代码
      * @return string 高亮后的HTML
      */
     private static function highlightCode(string $code): string
@@ -338,7 +338,7 @@ class ErrorHandler
     /**
      * 添加请求相关信息到错误模板
      *
-     * @param string $tpl 错误模板
+     * @param  string $tpl 错误模板
      * @return string 更新后的模板
      */
     private static function addRequestInfo(string $tpl): string

@@ -12,8 +12,9 @@ declare(strict_types=1);
 
 namespace nova\framework\cache;
 
-use nova\framework\core\Logger;
 use function nova\framework\config;
+
+use nova\framework\core\Logger;
 
 /**
  * 缓存管理类
@@ -28,7 +29,7 @@ class Cache
     /**
      * 构造函数
      *
-     * @param bool $shared 是否共享缓存
+     * @param bool        $shared      是否共享缓存
      * @param string|null $driverClazz 指定的缓存驱动类名
      */
     public function __construct(bool $shared = false, ?string $driverClazz = null)
@@ -50,9 +51,9 @@ class Cache
     /**
      * 设置缓存
      *
-     * @param string $key 缓存键
-     * @param mixed $value 缓存值
-     * @param int $ttl 过期时间（秒），0表示永不过期
+     * @param string $key   缓存键
+     * @param mixed  $value 缓存值
+     * @param int    $ttl   过期时间（秒），0表示永不过期
      */
     public function set(string $key, mixed $value, int $ttl = 0): void
     {
@@ -62,8 +63,8 @@ class Cache
     /**
      * 获取缓存
      *
-     * @param string $key 缓存键
-     * @param mixed $default 默认值
+     * @param  string $key     缓存键
+     * @param  mixed  $default 默认值
      * @return mixed  缓存值或默认值
      */
     public function get(string $key, mixed $default = null): mixed
@@ -102,7 +103,7 @@ class Cache
     /**
      * 获取缓存的剩余生存时间
      *
-     * @param string $key 缓存键
+     * @param  string $key 缓存键
      * @return int    剩余秒数，-1表示已过期，0表示永不过期
      */
     public function getTtl(string $key): int
@@ -112,6 +113,6 @@ class Cache
 
     public function gc($startKey)
     {
-        return $this->driver->gc($startKey,1000);
+        return $this->driver->gc($startKey, 1000);
     }
 }

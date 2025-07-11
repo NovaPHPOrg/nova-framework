@@ -35,9 +35,9 @@ class ArgObject
 
     /**
      * 当准备进行格式化的时候，该函数会在__construct初始化参数时进行调用
-     * @param string $key 当前初始化的key
-     * @param mixed $val 当前初始化要赋予的值
-     * @param mixed $demo 初始化对象的默认值
+     * @param  string $key  当前初始化的key
+     * @param  mixed  $val  当前初始化要赋予的值
+     * @param  mixed  $demo 初始化对象的默认值
      * @return bool   是否允许写入到对象中，返回false是不允许
      */
     public function onParseType(string $key, mixed &$val, mixed $demo): bool
@@ -61,7 +61,7 @@ class ArgObject
 
     /**
      * 将object对象转换为数组
-     * @param bool $callback 是否对每一项进行回调处理
+     * @param  bool  $callback 是否对每一项进行回调处理
      * @return array
      */
     public function toArray(bool $callback = true): array
@@ -82,9 +82,9 @@ class ArgObject
 
     /**
      * 在将object对象转换为数组的过程中，对每一项进行回调
-     * @param string $key 当前的key值
-     * @param mixed $value 当前转为数组的值
-     * @param array $ret 当前初始化后的数组
+     * @param  string $key   当前的key值
+     * @param  mixed  $value 当前转为数组的值
+     * @param  array  $ret   当前初始化后的数组
      * @return void
      */
     public function onToArray(string $key, mixed &$value, array &$ret): void

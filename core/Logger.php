@@ -13,8 +13,10 @@ declare(strict_types=1);
 namespace nova\framework\core;
 
 use Exception;
-use RuntimeException;
+
 use function nova\framework\isCli;
+
+use RuntimeException;
 
 /**
  * 增强版日志处理类
@@ -87,7 +89,7 @@ class Logger extends NovaApp
     /**
      * 创建目录（如果不存在）
      *
-     * @param string $path 要创建的目录路径
+     * @param  string           $path 要创建的目录路径
      * @throws RuntimeException 当目录创建失败时
      */
     private function createDirectory(string $path): void
@@ -111,14 +113,15 @@ class Logger extends NovaApp
     /**
      * 写入日志
      *
-     * @param mixed $message 日志消息，可以是字符串或任何可JSON序列化的数据
-     * @param string $level 日志级别
-     * @param array $context 上下文信息，将被JSON序列化
+     * @param mixed  $message 日志消息，可以是字符串或任何可JSON序列化的数据
+     * @param string $level   日志级别
+     * @param array  $context 上下文信息，将被JSON序列化
      */
     protected function write(mixed $message, string $level, array $context = []): void
     {
-        if (mt_rand(1, 100) === 1) $this->cleanupOldLogs();
-
+        if (mt_rand(1, 100) === 1) {
+            $this->cleanupOldLogs();
+        }
 
         // 非调试模式下跳过低级别日志
         if (!$this->debug && in_array($level, ['DEBUG', 'INFO', 'NOTICE','WARNING'])) {
@@ -164,7 +167,7 @@ class Logger extends NovaApp
         // 格式化日志消息
         $logMessage = $this->formatLogMessage($message, $level, $caller, $context);
 
-        if(empty(trim($logMessage))){ //数据为空就不写了
+        if (empty(trim($logMessage))) { //数据为空就不写了
             return;
         }
 
@@ -186,7 +189,7 @@ class Logger extends NovaApp
     /**
      * 格式化堆栈跟踪信息
      *
-     * @param array $trace debug_backtrace()的结果
+     * @param  array $trace debug_backtrace()的结果
      * @return array 格式化后的堆栈信息
      */
     private function formatStackTrace(array $trace): array
@@ -207,10 +210,10 @@ class Logger extends NovaApp
     /**
      * 格式化日志消息
      *
-     * @param mixed $message 原始消息
-     * @param string $level 日志级别
-     * @param array $caller 调用者信息
-     * @param array $context 上下文信息
+     * @param  mixed  $message 原始消息
+     * @param  string $level   日志级别
+     * @param  array  $caller  调用者信息
+     * @param  array  $context 上下文信息
      * @return string 格式化后的日志字符串
      */
     private function formatLogMessage(mixed $message, string $level, array $caller, array $context): string
@@ -291,7 +294,7 @@ class Logger extends NovaApp
     /**
      * 格式化字节大小为人类可读格式
      *
-     * @param int $bytes 字节数
+     * @param  int    $bytes 字节数
      * @return string 格式化后的大小
      */
     private function formatBytes(int $bytes): string

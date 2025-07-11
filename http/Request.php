@@ -79,7 +79,7 @@ class Request
 
     /**
      * 获取header头部内容
-     * @param string $headName 头部字段名称
+     * @param  string     $headName 头部字段名称
      * @return mixed|null 返回头部值，不存在时返回null
      */
     public function getHeaderValue($headName): mixed
@@ -225,8 +225,8 @@ class Request
 
     /**
      * 获取GET参数
-     * @param string|null $key 参数键名
-     * @param mixed|null $default 默认值
+     * @param  string|null $key     参数键名
+     * @param  mixed|null  $default 默认值
      * @return mixed       返回参数值
      */
     public function get(string $key = null, mixed $default = null): mixed
@@ -304,8 +304,8 @@ class Request
 
     /**
      * 获取POST参数
-     * @param string|null $key 参数键名
-     * @param mixed|null $default 默认值
+     * @param  string|null $key     参数键名
+     * @param  mixed|null  $default 默认值
      * @return mixed       返回参数值
      */
     public function post(string $key = null, mixed $default = null): mixed
@@ -315,8 +315,8 @@ class Request
 
     /**
      * 获取任意请求参数（GET/POST）
-     * @param string|null $key 参数键名
-     * @param mixed|null $default 默认值
+     * @param  string|null $key     参数键名
+     * @param  mixed|null  $default 默认值
      * @return mixed       返回参数值
      */
     public function arg(string $key = null, mixed $default = null): mixed

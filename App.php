@@ -130,7 +130,7 @@ class App extends NovaApp
      * 处理请求
      * 设置路由信息到请求对象中，触发应用启动事件，并执行路由
      *
-     * @param RouteObject $route 路由对象
+     * @param  RouteObject      $route 路由对象
      * @throws AppExitException
      */
     private function processRequest(RouteObject $route): void
@@ -223,8 +223,8 @@ class App extends NovaApp
 
     /**
      * 路由未找到时的钩子方法
-     * @param RouteObject|null $route 路由对象
-     * @param string $uri 请求URI
+     * @param  RouteObject|null $route 路由对象
+     * @param  string           $uri   请求URI
      * @return Response|null    自定义的错误响应
      */
     protected function onRouteNotFound(?RouteObject $route, string $uri): ?Response
@@ -238,7 +238,7 @@ class App extends NovaApp
      * - 调试模式：返回详细的异常信息
      * - 生产模式：返回配置的错误页面
      *
-     * @param int $statusCode HTTP状态码
+     * @param  int      $statusCode HTTP状态码
      * @return Response 错误响应对象
      */
     private function createErrorResponse(int $statusCode, Throwable $exception): Response
@@ -277,7 +277,7 @@ class App extends NovaApp
 
     /**
      * 应用发生错误时的钩子方法
-     * @param string $uri 请求URI
+     * @param  string        $uri 请求URI
      * @return Response|null 自定义的错误响应
      */
     protected function onApplicationError(string $uri): ?Response

@@ -26,8 +26,8 @@ class CacheException extends Exception
     /**
      * CacheException构造函数
      *
-     * @param string $message 异常信息
-     * @param int $code 异常代码
+     * @param string         $message  异常信息
+     * @param int            $code     异常代码
      * @param Throwable|null $previous 上一个异常（用于异常链）
      */
     public function __construct(string $message = "", int $code = 0, ?Throwable $previous = null)

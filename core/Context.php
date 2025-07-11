@@ -43,7 +43,7 @@ class Context
      *             当前框架的版本信息
      */
     public const string VERSION = "5.0.1";
-public Cache $cache;
+    public Cache $cache;
     /**
      * @var float 应用启动时间戳
      *            记录应用开始执行的微秒级时间戳，用于性能分析
@@ -79,7 +79,7 @@ public Cache $cache;
      *                           存储框架中的服务实例，实现依赖注入
      */
     protected array $instances = [];
-        /**
+    /**
      * @var array<string, mixed> 变量存储
      *                           用于在整个应用生命周期中存储临时数据
      */
@@ -155,8 +155,8 @@ public Cache $cache;
      * 获取变量值
      * 获取存储在应用范围内的临时数据
      *
-     * @param string $name 变量名
-     * @param mixed|null $default 默认值
+     * @param  string     $name    变量名
+     * @param  mixed|null $default 默认值
      * @return mixed      返回变量值，不存在时返回默认值
      */
     public function get(string $name, mixed $default = null): mixed
@@ -227,8 +227,8 @@ public Cache $cache;
      * 获取或创建实例
      * 实现简单的依赖注入容器功能
      *
-     * @param string $name 实例名称
-     * @param callable $create 创建实例的回调函数
+     * @param  string   $name   实例名称
+     * @param  callable $create 创建实例的回调函数
      * @return mixed    返回已存在的实例或新创建的实例
      *
      * @example
@@ -333,8 +333,8 @@ public Cache $cache;
      * 设置变量值
      * 在应用范围内存储临时数据
      *
-     * @param string $name 变量名
-     * @param mixed $value 变量值
+     * @param string $name  变量名
+     * @param mixed  $value 变量值
      */
     public function set(string $name, mixed $value): void
     {

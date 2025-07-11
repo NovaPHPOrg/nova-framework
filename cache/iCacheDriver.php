@@ -26,31 +26,31 @@ interface iCacheDriver
 
     /**
      * 获取缓存值
-     * @param string $key 缓存键名
-     * @param mixed|null $default 默认值（当缓存不存在时返回）
-     * @return mixed  缓存值或默认值
+     * @param  string     $key     缓存键名
+     * @param  mixed|null $default 默认值（当缓存不存在时返回）
+     * @return mixed      缓存值或默认值
      */
     public function get(string $key, mixed $default = null): mixed;
 
     /**
      * 设置缓存
-     * @param string $key 缓存键名
-     * @param mixed $value 缓存值
-     * @param int|null $expire 过期时间（秒）
+     * @param  string   $key    缓存键名
+     * @param  mixed    $value  缓存值
+     * @param  int|null $expire 过期时间（秒）
      * @return bool     是否设置成功
      */
     public function set(string $key, mixed $value, ?int $expire): bool;
 
     /**
      * 删除指定缓存
-     * @param string $key 缓存键名
+     * @param  string $key 缓存键名
      * @return bool   是否删除成功
      */
     public function delete(string $key): bool;
 
     /**
      * 删除指定前缀的所有缓存
-     * @param string $key 缓存键名前缀
+     * @param  string $key 缓存键名前缀
      * @return bool   是否删除成功
      */
     public function deleteKeyStartWith(string $key): bool;
@@ -63,11 +63,10 @@ interface iCacheDriver
 
     /**
      * 获取缓存的剩余生存时间
-     * @param string $key 缓存键名
+     * @param  string $key 缓存键名
      * @return int    剩余生存时间（秒），如果键不存在则返回 -1，如果键存在但没有过期时间则返回 -2
      */
     public function getTtl(string $key): int;
 
-
-    public function gc(string $startKey,int $maxCount);
+    public function gc(string $startKey, int $maxCount);
 }

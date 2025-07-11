@@ -21,7 +21,7 @@ use nova\framework\route\RouteObject;
 
 /**
  * 计算并记录运行时间
- * @param string $msg 要记录的消息
+ * @param  string $msg 要记录的消息
  * @return float  返回运行时间（毫秒）
  */
 function runtime(string $msg): float
@@ -33,10 +33,10 @@ function runtime(string $msg): float
 
 /**
  * 创建路由对象
- * @param string $module 模块名
- * @param string $controller 控制器名
- * @param string $action 动作名
- * @param array $params 路由参数
+ * @param  string      $module     模块名
+ * @param  string      $controller 控制器名
+ * @param  string      $action     动作名
+ * @param  array       $params     路由参数
  * @return RouteObject 返回路由对象
  */
 function route(string $module = "", string $controller = "", string $action = "", array $params = []): RouteObject
@@ -46,7 +46,7 @@ function route(string $module = "", string $controller = "", string $action = ""
 
 /**
  * 获取文件的MIME类型
- * @param string $filename 文件名
+ * @param  string $filename 文件名
  * @return string 返回MIME类型，如果未知则返回 'application/octet-stream'
  */
 function file_type(string $filename): string
@@ -114,8 +114,8 @@ function file_type(string $filename): string
 
 /**
  * 获取或设置配置项
- * @param string|null $key 配置键名
- * @param mixed|null $set 要设置的值
+ * @param  string|null $key 配置键名
+ * @param  mixed|null  $set 要设置的值
  * @return mixed       返回配置值或整个配置数组
  */
 function config(string $key = null, mixed $set = null): mixed
@@ -147,7 +147,7 @@ function isWorkerman(): bool
  * 在CLI模式下直接输出到控制台
  * 在Web模式下以HTML格式输出并终止程序
  *
- * @param mixed ...$args 要输出的变量
+ * @param  mixed            ...$args 要输出的变量
  * @throws AppExitException 在Web模式下会抛出此异常以终止程序
  */
 function dump(...$args): void
@@ -243,9 +243,9 @@ EOF;
 /**
  * 通用节流函数，多少秒内只允许执行一次 callback
  *
- * @param string $key 唯一限流标识（如用户IP、接口名等）
- * @param int $ttl 间隔秒数，比如10秒只允许执行一次
- * @param callable $callback 成功通过限流时要执行的逻辑
+ * @param  string     $key      唯一限流标识（如用户IP、接口名等）
+ * @param  int        $ttl      间隔秒数，比如10秒只允许执行一次
+ * @param  callable   $callback 成功通过限流时要执行的逻辑
  * @return mixed|null 返回 callback 的结果 或 null（被限流）
  */
 function throttle(string $key, int $ttl, callable $callback): mixed
