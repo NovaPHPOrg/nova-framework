@@ -67,11 +67,11 @@ class RouteObject
             }
             foreach ($vars as $var => $val) {
                 if ("{{$key}}" == $val) {
-                    $this->$var = $value;
+                    $this->$var = urldecode($value);
                 }
             }
             if ($key != "module" && $key != "controller" && $key != "action") {
-                $this->params[$key] = $value;
+                $this->params[$key] = urldecode($value);
             }
         }
     }

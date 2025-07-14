@@ -312,7 +312,7 @@ class Route extends NovaApp
     {
         foreach ($matches as $k => $v) {
             if (is_string($k)) {
-                $_GET[$k] = htmlspecialchars($v);
+                $_GET[$k] = htmlspecialchars(urldecode($v));
             }
         }
     }
