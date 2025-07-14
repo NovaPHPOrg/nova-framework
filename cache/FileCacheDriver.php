@@ -164,8 +164,12 @@ class FileCacheDriver implements iCacheDriver
     public function gc(string $startKey, int $maxCount): void
     {
         $now  = time();
+        $dir = $this->baseDir.DS.$startKey;
+        if (!file_exists($dir)) {
+            return;
+        }
         $iter = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($this->baseDir.DS.$startKey, \FilesystemIterator::SKIP_DOTS)
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)
         );
 
         $n = 0;
