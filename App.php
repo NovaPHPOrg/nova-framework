@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace nova\framework;
 
 use Error;
+use http\Exception\RuntimeException;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\core\NovaApp;
@@ -27,6 +28,7 @@ use Throwable;
 
 class App extends NovaApp
 {
+    const SYSTEM_NAME = "Nova App";
     /**
      * 性能监控阈值（毫秒）
      * 当应用执行时间超过此阈值时会触发性能警告
@@ -114,7 +116,7 @@ class App extends NovaApp
             if (class_exists($applicationClazz) && is_subclass_of($applicationClazz, App::class)) {
                 return new $applicationClazz();
             }
-            return new App();
+            throw new RuntimeException("你必须先创建 app\Application 并继承 nova\\framework\App ");
         });
     }
 
