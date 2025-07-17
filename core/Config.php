@@ -40,6 +40,7 @@ class Config
      */
     private string $configPath;
 
+    private string $configHash;
     /**
      * 构造函数
      * 初始化配置文件路径，加载配置文件内容，并计算初始哈希值
@@ -50,6 +51,8 @@ class Config
     {
         $this->configPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "config.php";
         $this->loadConfig();
+        $this->configHash = md5(json_encode($this->config));
+
     }
 
     /**
@@ -186,7 +189,7 @@ class Config
         }
 
         $config = $value;
-        $this->saveConfig();
+
     }
 
     /**
@@ -198,10 +201,14 @@ class Config
      */
     private function saveConfig(): void
     {
-        $content = "<?php\nreturn " . var_export($this->config, true) . ";";
-        if (file_put_contents($this->configPath, $content) === false) {
-            throw new RuntimeException("无法保存配置文件：{$this->configPath}");
+        if ($this->configHash !== md5(json_encode($this->config))) {
+            Logger::debug("Config changed: {$this->configHash},", $this->config);
+            $content = "<?php\nreturn " . var_export($this->config, true) . ";";
+            if (file_put_contents($this->configPath, $content) === false) {
+                throw new RuntimeException("无法保存配置文件：{$this->configPath}");
+            }
         }
+
     }
 
     /**
@@ -211,7 +218,7 @@ class Config
      */
     public function __destruct()
     {
-
+        $this->saveConfig();
     }
 
     /**

@@ -36,7 +36,11 @@ $loader = new Loader();
 
 // 初始化应用程序上下文
 $context = new Context($loader);
-
+if ($context->isDebug()) {
+    if (function_exists('opcache_reset')) {
+        opcache_reset(); // 清空所有已缓存的脚本
+    }
+}
 // 加载助手函数
 include_once "helper.php";
 
