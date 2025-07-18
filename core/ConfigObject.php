@@ -22,11 +22,6 @@ abstract class ConfigObject
      */
     private string $node;
 
-    /**
-     * 配置数据的MD5哈希值，用于检测配置是否发生变化
-     * @var string
-     */
-    private string $configHash;
 
     /**
      * 构造函数
@@ -40,7 +35,6 @@ abstract class ConfigObject
     {
         $this->node = $this->inferNode();
         $this->loadConfig();
-        $this->configHash = $this->hash();
     }
 
     /**
@@ -55,7 +49,7 @@ abstract class ConfigObject
     {
         $cfg = get_object_vars($this);
         // 移除内部私有变量，这些不属于配置数据
-        unset($cfg['node'], $cfg['configHash']);
+        unset($cfg['node']);
         return $cfg;
     }
 
@@ -106,10 +100,7 @@ abstract class ConfigObject
     public function __destruct()
     {
         $cfg  = $this->getConfig();
-        if ($this->configHash !== $this->hash()) {
-            Logger::debug("Config changed from hash: {$this->configHash}", $cfg);
-            Context::instance()->config()->set($this->node, $cfg);
-        }
+        Context::instance()->config()->set($this->node, $cfg);
     }
 
     /**
