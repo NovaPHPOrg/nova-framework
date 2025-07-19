@@ -396,4 +396,9 @@ class Request
     {
         return Arguments::raw();
     }
+
+    public function file(string $name): ?UploadModel
+    {
+        return Arguments::file($name);
+    }
 }

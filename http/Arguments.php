@@ -95,4 +95,21 @@ class Arguments
     {
         return file_get_contents("php://input") ?? null;
     }
+
+    /**
+     * 获取上传的文件
+     * @param  string           $name
+     * @return UploadModel|null
+     */
+    public static function file(string $name): ?UploadModel
+    {
+        if (!isset($_FILES[$name])) {
+            return null;
+        }
+        try {
+            return new UploadModel($_FILES[$name]);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
 }
