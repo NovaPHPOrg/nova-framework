@@ -16,44 +16,64 @@ use nova\framework\core\Context;
 use nova\framework\route\RouteObject;
 
 /**
- * Request类 - 处理HTTP请求
+ * HTTP请求处理类
  *
  * 该类负责处理所有与HTTP请求相关的操作，包括：
  * - 请求头的处理
  * - URL和域名解析
  * - 请求方法判断
  * - 参数获取
+ * - 客户端信息获取
+ *
+ * @author Ankio
+ * @version 1.0
+ * @since 2025-01-01
  */
 class Request
 {
     /**
      * 请求唯一标识符
+     * 用于跟踪和识别不同的请求
      */
     protected string $id;
 
     /**
      * 路由对象
+     * 存储当前请求匹配的路由信息
      */
     private ?RouteObject $route = null;
 
     /**
      * 请求头数组
+     * 缓存解析后的HTTP请求头信息
      */
     private array $headers = [];
 
     /**
-     * 构造函数 - 初始化请求ID
+     * 构造函数
+     *
+     * 初始化请求ID，为每个请求生成唯一标识符
      */
     public function __construct()
     {
         $this->id = uniqid("req_", true);
     }
 
+    /**
+     * 获取路由对象
+     *
+     * @return RouteObject|null 返回当前请求的路由对象
+     */
     public function getRoute(): ?RouteObject
     {
         return $this->route;
     }
 
+    /**
+     * 设置路由对象
+     *
+     * @param RouteObject $route 路由对象
+     */
     public function setRoute(RouteObject $route): void
     {
         $this->route = $route;
@@ -61,6 +81,7 @@ class Request
 
     /**
      * 获取请求唯一标识符
+     *
      * @return string 返回请求ID
      */
     public function id(): string
@@ -70,6 +91,7 @@ class Request
 
     /**
      * 获取请求URI
+     *
      * @return string 返回当前请求的URI
      */
     public function getUri(): string
@@ -78,7 +100,8 @@ class Request
     }
 
     /**
-     * 获取header头部内容
+     * 获取指定请求头的值
+     *
      * @param  string     $headName 头部字段名称
      * @return mixed|null 返回头部值，不存在时返回null
      */
@@ -95,7 +118,9 @@ class Request
 
     /**
      * 初始化请求头信息
+     *
      * 支持Apache和Nginx等不同服务器环境
+     * 处理各种HTTP头部信息的解析
      */
     private function initHeaders(): void
     {
@@ -124,6 +149,7 @@ class Request
 
     /**
      * 获取所有请求头信息
+     *
      * @return array 返回所有请求头数组
      */
     public function getHeaders(): array
@@ -135,9 +161,11 @@ class Request
     }
 
     /**
-     * 获取域名，无端口
+     * 获取域名（不含端口）
+     *
      * 例如：example.com
-     * @return string
+     *
+     * @return string 返回域名
      */
     public function getDomainNoPort(): string
     {
@@ -145,9 +173,11 @@ class Request
     }
 
     /**
-     * 获取域名
+     * 获取域名（含端口）
+     *
      * 例如：example.com 或 example.com:8088
-     * @return string
+     *
+     * @return string 返回域名
      */
     public function getDomain(): string
     {
@@ -155,9 +185,11 @@ class Request
     }
 
     /**
-     * 获取当前访问的地址
+     * 获取当前访问的完整地址
+     *
      * 例如：https://example.com/index/main
-     * @return string
+     *
+     * @return string 返回完整的访问地址
      */
     public function getNowAddress(): string
     {
@@ -166,6 +198,7 @@ class Request
 
     /**
      * 获取当前请求的HTTP协议类型
+     *
      * @return string 返回 'http://' 或 'https://'
      */
     public function getHttpScheme(): string
@@ -182,6 +215,9 @@ class Request
 
     /**
      * 判断当前请求是否为HTTPS
+     *
+     * 通过多种方式检测HTTPS状态
+     *
      * @return bool 如果是HTTPS返回true，否则返回false
      */
     private function isHttps(): bool
@@ -195,9 +231,11 @@ class Request
     }
 
     /**
-     * 获取当前访问的地址
+     * 获取基础访问地址
+     *
      * 例如：https://example.com/
-     * @return string
+     *
+     * @return string 返回基础地址
      */
     public function getBasicAddress(): string
     {
@@ -206,6 +244,9 @@ class Request
 
     /**
      * 获取服务器IP地址
+     *
+     * 优先使用配置中的IP，否则通过域名解析获取
+     *
      * @return string 返回服务器IP地址
      */
     public function getServerIp(): string
@@ -225,6 +266,7 @@ class Request
 
     /**
      * 获取GET参数
+     *
      * @param  string|null $key     参数键名
      * @param  mixed|null  $default 默认值
      * @return mixed       返回参数值
@@ -236,7 +278,10 @@ class Request
 
     /**
      * 获取客户端真实IP
-     * @return string
+     *
+     * 移除可能存在的端口号
+     *
+     * @return string 返回客户端IP地址
      */
     public function getClientIP(): string
     {
@@ -250,34 +295,38 @@ class Request
 
     /**
      * 判断是否为PJAX请求
-     * @return bool 如果是PJAX请求返回true，否则返回false
+     *
+     * @return bool 如果是PJAX请求返回true
      */
     public function isPjax(): bool
     {
-        return (isset($_SERVER['HTTP_X_PJAX']) && $_SERVER['HTTP_X_PJAX'] == 'true');
+        return isset($_SERVER['HTTP_X_PJAX']) && $_SERVER['HTTP_X_PJAX'] === 'true';
     }
 
     /**
      * 判断是否为AJAX请求
-     * @return bool 如果是AJAX请求返回true，否则返回false
+     *
+     * @return bool 如果是AJAX请求返回true
      */
     public function isAjax(): bool
     {
-        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
+        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
 
     /**
      * 判断是否为GET请求
-     * @return bool 如果是GET请求返回true，否则返回false
+     *
+     * @return bool 如果是GET请求返回true
      */
     public function isGet(): bool
     {
-        return $_SERVER['REQUEST_METHOD'] == 'GET';
+        return $this->getRequestMethod() === 'GET';
     }
 
     /**
      * 获取请求方法
-     * @return string 返回HTTP请求方法（GET、POST等）
+     *
+     * @return string 返回HTTP请求方法
      */
     public function getRequestMethod(): string
     {
@@ -286,15 +335,17 @@ class Request
 
     /**
      * 判断是否为POST请求
-     * @return bool 如果是POST请求返回true，否则返回false
+     *
+     * @return bool 如果是POST请求返回true
      */
     public function isPost(): bool
     {
-        return $_SERVER['REQUEST_METHOD'] == 'POST';
+        return $this->getRequestMethod() === 'POST';
     }
 
     /**
-     * 获取请求端口号
+     * 获取服务器端口
+     *
      * @return int 返回服务器端口号
      */
     public function port(): int
@@ -304,6 +355,7 @@ class Request
 
     /**
      * 获取POST参数
+     *
      * @param  string|null $key     参数键名
      * @param  mixed|null  $default 默认值
      * @return mixed       返回参数值
@@ -314,7 +366,8 @@ class Request
     }
 
     /**
-     * 获取任意请求参数（GET/POST）
+     * 获取路由参数
+     *
      * @param  string|null $key     参数键名
      * @param  mixed|null  $default 默认值
      * @return mixed       返回参数值
@@ -325,8 +378,9 @@ class Request
     }
 
     /**
-     * 获取JSON格式的请求数据
-     * @return array 返回解析后的JSON数组
+     * 获取JSON请求数据
+     *
+     * @return array 返回解析后的JSON数据
      */
     public function json(): array
     {
@@ -335,7 +389,8 @@ class Request
 
     /**
      * 获取原始请求数据
-     * @return string 返回原始请求数据
+     *
+     * @return string 返回原始请求内容
      */
     public function raw(): string
     {

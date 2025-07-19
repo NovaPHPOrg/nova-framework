@@ -19,6 +19,7 @@ use RuntimeException;
 
 /**
  * 框架核心上下文类
+ *
  * 作为框架的核心容器，负责管理整个应用的生命周期、配置和运行时信息
  * 实现了单例模式，确保整个应用中只有一个Context实例
  *
@@ -39,54 +40,68 @@ use RuntimeException;
 class Context
 {
     /**
-     * @var string 框架版本号
-     *             当前框架的版本信息
+     * 框架版本号
+     * 当前框架的版本信息
      */
     public const string VERSION = "5.0.1";
-    public Cache $cache;
+
     /**
-     * @var float 应用启动时间戳
-     *            记录应用开始执行的微秒级时间戳，用于性能分析
+     * 缓存实例
+     * 用于管理应用程序的缓存功能
+     */
+    public Cache $cache;
+
+    /**
+     * 应用启动时间戳
+     * 记录应用开始执行的微秒级时间戳，用于性能分析
      */
     protected float $start_time = 0.0;
+
     /**
-     * @var Config 配置对象实例
-     *             存储和管理应用的所有配置信息
+     * 配置对象实例
+     * 存储和管理应用的所有配置信息
      */
     protected Config $config;
+
     /**
-     * @var bool 调试模式开关
-     *           控制应用是否运行在调试模式下，影响错误显示等行为
+     * 调试模式开关
+     * 控制应用是否运行在调试模式下，影响错误显示等行为
      */
     protected bool $debug = false;
+
     /**
-     * @var Request 当前请求对象
-     *              封装了当前HTTP请求的信息
+     * 当前请求对象
+     * 封装了当前HTTP请求的信息
      */
     protected Request $request;
+
     /**
-     * @var string 会话ID
-     *             当前用户会话的唯一标识符
+     * 会话ID
+     * 当前用户会话的唯一标识符
      */
     protected string $session_id;
+
     /**
-     * @var Loader 类加载器实例
-     *             负责自动加载类文件
+     * 类加载器实例
+     * 负责自动加载类文件
      */
     protected Loader $loader;
+
     /**
-     * @var array<string, mixed> 实例容器
-     *                           存储框架中的服务实例，实现依赖注入
+     * 实例容器
+     * 存储框架中的服务实例，实现依赖注入
      */
     protected array $instances = [];
+
     /**
-     * @var array<string, mixed> 变量存储
-     *                           用于在整个应用生命周期中存储临时数据
+     * 变量存储
+     * 用于在整个应用生命周期中存储临时数据
      */
-    protected array $vars = []; //缓存类
+    protected array $vars = [];
 
     /**
      * 构造函数
+     *
      * 初始化应用环境，设置基础配置，启动核心组件
      *
      * @param Loader $loader 类加载器实例
@@ -94,7 +109,7 @@ class Context
     public function __construct(Loader $loader)
     {
         $this->start_time = microtime(true);
-        //初始化框架
+        // 初始化框架
         $this->initFramework();
         // 初始化配置对象
         $this->initConfig();
@@ -104,44 +119,44 @@ class Context
         $this->initRequest();
         // 初始化加载器
         $this->initLoader($loader);
-
     }
 
     /**
      * 初始化框架
+     *
      * 定义框架所需的常量和基础路径
      */
     public function initFramework(): void
     {
-        //根目录
+        // 根目录
         defined('ROOT_PATH') or define('ROOT_PATH', dirname(__DIR__, 3));
-        //目录分隔符
+        // 目录分隔符
         defined('DS') or define('DS', DIRECTORY_SEPARATOR);
-        //框架目录
+        // 框架目录
         defined('FRAMEWORK_PATH') or define('FRAMEWORK_PATH', __DIR__);
-        //应用目录
+        // 应用目录
         defined('APP_PATH') or define('APP_PATH', ROOT_PATH . DS . 'app');
-        //运行时目录
+        // 运行时目录
         defined('RUNTIME_PATH') or define('RUNTIME_PATH', ROOT_PATH . DS . 'runtime');
-        //配置目录
+        // 配置目录
         defined('CONFIG_PATH') or define('CONFIG_PATH', ROOT_PATH . DS . 'config');
-        //日志目录
+        // 日志目录
         defined('LOG_PATH') or define('LOG_PATH', RUNTIME_PATH . DS . 'logs');
-        //临时目录
+        // 临时目录
         defined('TEMP_PATH') or define('TEMP_PATH', RUNTIME_PATH . DS . 'temp');
-        //缓存目录
+        // 缓存目录
         defined('CACHE_PATH') or define('CACHE_PATH', RUNTIME_PATH . DS . 'cache');
-        //公共目录
+        // 公共目录
         defined('PUBLIC_PATH') or define('PUBLIC_PATH', ROOT_PATH . DS . 'public');
-        //vendor目录
+        // vendor目录
         defined('VENDOR_PATH') or define('VENDOR_PATH', ROOT_PATH . DS . 'vendor');
-        //框架版本
+        // 框架版本
         defined('NOVA_VERSION') or define('NOVA_VERSION', self::VERSION);
-
     }
 
     /**
      * 初始化配置
+     *
      * 创建配置对象，设置调试模式和时区
      */
     public function initConfig(): void
@@ -153,6 +168,7 @@ class Context
 
     /**
      * 获取变量值
+     *
      * 获取存储在应用范围内的临时数据
      *
      * @param  string     $name    变量名
@@ -166,6 +182,7 @@ class Context
 
     /**
      * 检查域名是否合法
+     *
      * 验证当前请求的域名是否在允许列表中
      *
      * @throws RuntimeException 当域名不在允许列表中时终止执行
@@ -177,11 +194,11 @@ class Context
         if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
             exit("[ NovaPHP ] Domain Error ：" . htmlspecialchars($serverName) . " not in config.domain list.");
         }
-
     }
 
     /**
      * 初始化请求
+     *
      * 创建请求对象并设置会话ID
      */
     public function initRequest(): void
@@ -192,6 +209,7 @@ class Context
 
     /**
      * 初始化类加载器
+     *
      * 配置命名空间映射关系
      *
      * @param Loader $loader 加载器实例
@@ -204,6 +222,7 @@ class Context
 
     /**
      * 获取Context单例实例
+     *
      * 确保整个应用中只有一个Context实例
      *
      * @return Context          返回Context实例
@@ -218,6 +237,11 @@ class Context
         return $context;
     }
 
+    /**
+     * 初始化缓存
+     *
+     * 创建缓存实例
+     */
     public function init()
     {
         $this->cache = new Cache();
@@ -225,6 +249,7 @@ class Context
 
     /**
      * 获取或创建实例
+     *
      * 实现简单的依赖注入容器功能
      *
      * @param  string   $name   实例名称
@@ -249,7 +274,7 @@ class Context
     /**
      * 获取会话ID
      *
-     * @return string 当前会话的唯一标识符
+     * @return string 返回当前会话的唯一标识符
      */
     public function getSessionId(): string
     {
@@ -257,9 +282,9 @@ class Context
     }
 
     /**
-     * 获取会话ID
+     * 获取会话ID（别名方法）
      *
-     * @return string 当前会话的唯一标识符
+     * @return string 返回当前会话的唯一标识符
      */
     public function sessionId(): string
     {
@@ -267,9 +292,9 @@ class Context
     }
 
     /**
-     * 获取配置对象实例
+     * 获取配置对象
      *
-     * @return Config 配置对象
+     * @return Config 返回配置对象实例
      */
     public function config(): Config
     {
@@ -277,9 +302,9 @@ class Context
     }
 
     /**
-     * 获取调试模式状态
+     * 检查是否为调试模式
      *
-     * @return bool 是否处于调试模式
+     * @return bool 返回调试模式状态
      */
     public function isDebug(): bool
     {
@@ -287,9 +312,9 @@ class Context
     }
 
     /**
-     * 获取当前请求对象
+     * 获取请求对象
      *
-     * @return Request 当前HTTP请求对象
+     * @return Request 返回当前请求对象
      */
     public function request(): Request
     {
@@ -298,9 +323,8 @@ class Context
 
     /**
      * 计算应用运行时间
-     * 返回从应用启动到当前时刻的运行时间
      *
-     * @return float 运行时间（秒）
+     * @return float 返回应用运行的总时间（秒）
      */
     public function calcAppTime(): float
     {
@@ -309,29 +333,37 @@ class Context
 
     /**
      * 析构函数
-     * 清理实例资源
+     *
+     * 在对象销毁时执行清理工作
      */
     public function __destruct()
     {
         $this->destroy();
     }
 
+    /**
+     * 销毁上下文
+     *
+     * 清理所有实例和变量
+     */
     public function destroy(): void
     {
-        foreach ($this->instances as &$instance) {
-            $instance = null;
-        }
-        $_GET = $_POST = $_REQUEST = $_COOKIE = $_FILES = [];
+        $this->instances = [];
+        $this->vars = [];
     }
 
+    /**
+     * 设置响应类
+     *
+     * @param string $class 响应类名
+     */
     public function setResponseClass(string $class): void
     {
-        $this->set('response.class', $class);
+        $this->set('response_class', $class);
     }
 
     /**
      * 设置变量值
-     * 在应用范围内存储临时数据
      *
      * @param string $name  变量名
      * @param mixed  $value 变量值
@@ -341,9 +373,13 @@ class Context
         $this->vars[$name] = $value;
     }
 
+    /**
+     * 获取响应类
+     *
+     * @return string 返回响应类名
+     */
     public function getResponseClass(): string
     {
-        return $this->get('response.class', Response::class);
+        return $this->get('response_class', Response::class);
     }
-
 }

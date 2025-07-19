@@ -185,6 +185,15 @@ class App extends NovaApp
         }
     }
 
+    /**
+     * 打印异常信息
+     *
+     * 根据调试模式显示不同的异常信息：
+     * - 调试模式：显示详细的异常堆栈信息
+     * - 生产模式：显示友好的错误提示
+     *
+     * @param \Exception|\Error $e 异常对象
+     */
     private function printException(\Exception|\Error $e): void
     {
         if ($this->context->isDebug()) {
@@ -259,6 +268,13 @@ class App extends NovaApp
 
     /**
      * 处理一般异常
+     *
+     * 处理应用程序运行时的各种异常，包括：
+     * - 记录错误日志
+     * - 触发应用错误事件
+     * - 生成错误响应
+     *
+     * @param Throwable|Error $exception 异常对象
      */
     private function handleGeneralException(Throwable|Error $exception): void
     {
@@ -289,6 +305,11 @@ class App extends NovaApp
 
     /**
      * 结束应用程序
+     *
+     * 执行应用程序的清理工作，包括：
+     * - 触发框架结束事件
+     * - 性能监控和警告
+     * - 记录应用程序结束日志
      */
     private function finalizeApplication(): void
     {

@@ -23,27 +23,62 @@ use function nova\framework\route;
 
 /**
  * 路由管理类
- * 负责处理HTTP请求的路由注册和分发
+ *
+ * 负责处理HTTP请求的路由注册和分发，提供完整的路由管理功能：
+ * - 支持多种HTTP方法的路由注册
+ * - 支持参数化路由和正则匹配
+ * - 提供路由缓存和性能优化
+ * - 支持默认路由规则
+ *
+ * 使用示例：
+ * ```php
+ * Route::getInstance()
+ *     ->get('/users/{id}', route('user', 'main', 'show'))
+ *     ->post('/users', route('user', 'main', 'create'));
+ * ```
  */
 class Route extends NovaApp
 {
-    /** @var array 正则规则缓存 */
+    /**
+     * 正则规则缓存
+     * 缓存已编译的正则表达式，提高路由匹配性能
+     */
     private static array $ruleCache = [];
-    /** @var array 按HTTP方法索引的路由缓存 */
+
+    /**
+     * 按HTTP方法索引的路由缓存
+     * 按请求方法分组存储路由规则，提高查找效率
+     */
     private array $routeIndex = [];
-    /** @var string 当前请求的URI */
+
+    /**
+     * 当前请求的URI
+     * 存储经过处理的当前请求URI
+     */
     private string $uri = "";
-    /** @var string 网站根路径 */
+
+    /**
+     * 网站根路径
+     * 存储应用程序的根路径信息
+     */
     private string $root = "";
 
     /**
      * 构造函数，禁止直接实例化
+     * 使用单例模式管理路由实例
      */
     private function __construct()
     {
         parent::__construct();
     }
 
+    /**
+     * 注册同时支持GET和POST的路由
+     *
+     * @param  string      $uri    路由URI
+     * @param  RouteObject $mapper 路由映射对象
+     * @return self        返回当前实例以支持链式调用
+     */
     public function getOrPost(string $uri, RouteObject $mapper): self
     {
         $this->get($uri, $mapper)->post($uri, $mapper);
@@ -72,7 +107,7 @@ class Route extends NovaApp
      */
     private function add(string $uri, RouteObject $mapper, string $method = ""): void
     {
-        // 规范化URI
+        // 规范化URI，确保以/开头
         $uri = '/' . trim($uri, '/');
 
         if (!empty($method)) {
@@ -245,6 +280,12 @@ class Route extends NovaApp
     /**
      * 查找匹配的路由
      *
+     * 根据HTTP方法和URI查找匹配的路由规则，流程：
+     * 1. 优先检查指定HTTP方法的路由
+     * 2. 如果未找到，检查通用路由（ANY）
+     * 3. 使用正则表达式匹配路由规则
+     * 4. 提取路由参数并更新路由对象
+     *
      * @param  string           $method HTTP请求方法
      * @return RouteObject|null 返回匹配的路由对象，如果未找到则返回null
      */
@@ -284,6 +325,13 @@ class Route extends NovaApp
     /**
      * 构建路由正则表达式规则
      *
+     * 将路由规则转换为正则表达式，支持参数化路由：
+     * - {param} -> (?P<param>.+?)
+     * - @number -> \d+
+     * - @word -> \w+
+     *
+     * 使用缓存机制提高性能，避免重复编译正则表达式
+     *
      * @param  string $key 路由规则
      * @return string 转换后的正则表达式
      */
@@ -306,6 +354,9 @@ class Route extends NovaApp
     /**
      * 设置匹配到的路由参数到$_GET数组中
      *
+     * 将正则匹配结果中的命名捕获组提取为GET参数
+     * 对参数值进行HTML转义和URL解码处理
+     *
      * @param array $matches 正则匹配结果
      */
     private function setMatchedParameters(array $matches): void
@@ -317,6 +368,11 @@ class Route extends NovaApp
         }
     }
 
+    /**
+     * 获取当前请求的URI
+     *
+     * @return string 返回经过处理的当前请求URI
+     */
     public function getUri(): string
     {
         return $this->uri;
@@ -334,6 +390,9 @@ class Route extends NovaApp
 
     /**
      * 清除路由缓存
+     *
+     * 清除所有已编译的正则表达式缓存
+     * 通常在开发环境中修改路由规则后调用
      */
     public function clearCache(): void
     {
