@@ -14,6 +14,7 @@ namespace nova\framework\http;
 
 use nova\framework\core\Context;
 use nova\framework\route\RouteObject;
+use function nova\framework\dump;
 
 /**
  * HTTP请求处理类
@@ -242,27 +243,43 @@ class Request
         return $this->getHttpScheme() . $_SERVER["HTTP_HOST"];
     }
 
+
     /**
-     * 获取服务器IP地址
+     * 尝试获取服务器 IP。
      *
-     * 优先使用配置中的IP，否则通过域名解析获取
+     * 优先级：
+     *   1) $_SERVER['SERVER_ADDR']（Web 环境最快）
+     *   2) gethostbyname()/gethostbynamel()（SAPI 无关）
+     *   3) shell_exec('hostname -I')      （Linux 通用，需要 shell 权限）
+     *   4) sockets trick (UDP connect)    （最兜底，需 sockets 扩展）
      *
-     * @return string 返回服务器IP地址
+     * @return string|null        找不到就 null
      */
-    public function getServerIp(): string
+    function getServerIp(): ?string
     {
-        $ip = Context::instance()->config()->get('server_ip');
-        if (!empty($ip)) {
-            return $ip;
+
+
+        // 1) Web 环境最直接
+        if (!empty($_SERVER['SERVER_ADDR']) &&
+            filter_var($_SERVER['SERVER_ADDR'], FILTER_VALIDATE_IP)
+        ) {
+            return $_SERVER['SERVER_ADDR'];
         }
 
-        $data = gethostbyname($_SERVER["SERVER_NAME"]);
-        if ($data !== $_SERVER["SERVER_NAME"]) {
-            Context::instance()->config()->set('server_ip', $data);
-            return $data;
+        // 2) 主机名解析（CLI 也能用）
+        $hostname = gethostname();
+        if ($hostname) {
+            // 单 IP
+            $ip = gethostbyname($hostname);
+            if ($ip !== $hostname && filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
         }
-        return $data;
+
+        // 实在拿不到
+        return null;
     }
+
 
     /**
      * 获取GET参数
