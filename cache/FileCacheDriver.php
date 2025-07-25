@@ -10,6 +10,9 @@ declare(strict_types=1);
 
 namespace nova\framework\cache;
 
+use Exception;
+use nova\framework\core\Logger;
+
 /**
  * 文件缓存驱动类
  *
@@ -87,8 +90,13 @@ class FileCacheDriver implements iCacheDriver
             }
 
             // ② 读取剩余内容并反序列化
-            $value = @unserialize(stream_get_contents($fp));
-            return ($value === false) ? $default : $value;
+            try {
+                $value = @unserialize(stream_get_contents($fp));
+                return ($value === false) ? $default : $value;
+            } catch (Exception $exception) {
+                Logger::error("FileCache Exception:".$exception->getMessage(), $exception->getTrace());
+                return $default;
+            }
 
         } finally {
             // 确保资源正确释放
