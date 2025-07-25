@@ -12,9 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework\http;
 
-use nova\framework\core\Context;
 use nova\framework\route\RouteObject;
-use function nova\framework\dump;
 
 /**
  * HTTP请求处理类
@@ -243,7 +241,6 @@ class Request
         return $this->getHttpScheme() . $_SERVER["HTTP_HOST"];
     }
 
-
     /**
      * 尝试获取服务器 IP。
      *
@@ -253,11 +250,10 @@ class Request
      *   3) shell_exec('hostname -I')      （Linux 通用，需要 shell 权限）
      *   4) sockets trick (UDP connect)    （最兜底，需 sockets 扩展）
      *
-     * @return string|null        找不到就 null
+     * @return string|null 找不到就 null
      */
-    function getServerIp(): ?string
+    public function getServerIp(): ?string
     {
-
 
         // 1) Web 环境最直接
         if (!empty($_SERVER['SERVER_ADDR']) &&
@@ -279,7 +275,6 @@ class Request
         // 实在拿不到
         return null;
     }
-
 
     /**
      * 获取GET参数
