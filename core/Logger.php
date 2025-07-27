@@ -283,7 +283,28 @@ class Logger extends NovaApp
             // 添加其他上下文信息（如果有）
             if (!empty($context)) {
                 $log .= "Additional Context:\n";
-                $log .= "  " . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+                
+                // 特殊处理trace字段
+                if (isset($context['trace'])) {
+                    $log .= "Trace:\n";
+                    $traceStr = $context['trace'];
+                    // 将trace字符串按行分割并格式化显示
+                    $traceLines = explode("\n", $traceStr);
+                    foreach ($traceLines as $traceLine) {
+                        $traceLine = trim($traceLine);
+                        if (!empty($traceLine)) {
+                            $log .= "  " . $traceLine . "\n";
+                        }
+                    }
+                    // 从context中移除trace，避免重复显示
+                    unset($context['trace']);
+                }
+                
+                // 显示其他context字段（如果还有的话）
+                if (!empty($context)) {
+                    $log .= "Other Context:\n";
+                    $log .= "  " . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+                }
             }
         }
 
