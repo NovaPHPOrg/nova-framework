@@ -283,7 +283,7 @@ class Logger extends NovaApp
             // 添加其他上下文信息（如果有）
             if (!empty($context)) {
                 $log .= "Additional Context:\n";
-                
+
                 // 特殊处理trace字段
                 if (isset($context['trace'])) {
                     $log .= "Trace:\n";
@@ -299,7 +299,7 @@ class Logger extends NovaApp
                     // 从context中移除trace，避免重复显示
                     unset($context['trace']);
                 }
-                
+
                 // 显示其他context字段（如果还有的话）
                 if (!empty($context)) {
                     $log .= "Other Context:\n";
