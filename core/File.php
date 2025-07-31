@@ -98,8 +98,8 @@ class File
 
             closedir($dir);
             return $success;
-        } catch (\Exception $e) {
-            error_log("复制目录失败: " . $e->getMessage());
+        } catch (\ErrorException $e) {
+            Logger::error("复制失败: " . $e->getMessage(),$e->getTrace());
             return false;
         }
     }
@@ -111,15 +111,14 @@ class File
      */
     public static function mkDir($dir): bool
     {
+        Logger::info("File::mkDir $dir",(new \Exception())->getTrace());
         if (!self::exists($dir)) {
             try {
-                if (mkdir($dir, 0755, true)) {
-                    chmod($dir, 0755);  // 确保权限设置正确
-                    return true;
-                }
-                return false;
-            } catch (\Exception $e) {
-                error_log("创建目录失败: " . $e->getMessage());
+                mkdir($dir, 0755, true);
+                return true;
+            } catch (\ErrorException $e) {
+                if(str_contains($e->getMessage(), 'File exists')) return true;
+                Logger::error("创建目录失败: " . $e->getMessage(),$e->getTrace());
                 return false;
             }
         }
@@ -150,8 +149,8 @@ class File
                 return copy($src, $dest);
             }
             return false;
-        } catch (\Exception $e) {
-            error_log("复制文件失败: " . $e->getMessage());
+        } catch (\ErrorException $e) {
+            Logger::error("复制文件失败: " . $e->getMessage(),$e->getTrace());
             return false;
         }
     }
@@ -190,8 +189,8 @@ class File
             if (file_put_contents($file, $body) === false) {
                 throw new \Exception("写入文件失败");
             }
-        } catch (\Exception $e) {
-            error_log("写入文件失败: " . $e->getMessage());
+        } catch (\ErrorException $e) {
+            Logger::error("删除文件或目录失败: " . $e->getMessage(),$e->getTrace());
             throw $e;
         }
     }
@@ -201,9 +200,12 @@ class File
      * @param  string     $dir 文件或目录路径
      * @throws \Exception 删除失败时抛出异常
      */
-    public static function del(string $dir): void
+    public static function del(string $dir,bool $onlyFile = false): void
     {
         try {
+
+            Logger::info("File::delete($onlyFile) $dir",(new \Exception())->getTrace());
+
             if (!file_exists($dir)) {
                 return;
             }
@@ -213,15 +215,16 @@ class File
                 if(!$files) return;
                 foreach ($files as $file) {
                     if ($file != '.' && $file != '..') {
-                        self::del($dir . DIRECTORY_SEPARATOR . $file);
+                        self::del($dir . DIRECTORY_SEPARATOR . $file,$onlyFile);
                     }
                 }
-                rmdir($dir);
+                if(!$onlyFile) rmdir($dir);
             } else {
                 unlink($dir);
             }
-        } catch (\Exception $e) {
-
+        } catch (\ErrorException $e) {
+            if(str_contains($e->getMessage(), 'No such file or directory')) return;
+            Logger::error("删除文件或目录失败: " . $e->getMessage(),$e->getTrace());
         }
     }
 }

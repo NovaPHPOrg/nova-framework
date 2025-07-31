@@ -27,11 +27,11 @@ class ErrorException extends Exception
     /**
      * ErrorException 构造函数
      *
-     * @param string         $message  错误信息
-     * @param int            $code     错误代码
+     * @param string $message  错误信息
+     * @param int $code     错误代码
      * @param Throwable|null $previous 前一个异常（用于异常链）
      */
-    public function __construct($message = "", $code = 0, Throwable $previous = null)
+    public function __construct(string $message = "", int $code = 0, Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
         Logger::error($message);

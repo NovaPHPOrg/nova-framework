@@ -106,7 +106,7 @@ class FileCacheDriver implements iCacheDriver
                 fclose($fp);                 // 关闭文件
             }
             if ($expired) {                  // 安全删除过期文件
-                @unlink($file);
+                File::del($file,true);
             }
         }
     }
@@ -128,12 +128,8 @@ class FileCacheDriver implements iCacheDriver
 
         // 获取缓存文件路径
         $file = $this->getFilePath($key);
-
-        // 确保目录存在
-        if (!is_dir($dir = dirname($file))) {
-            mkdir($dir, 0777, true);
-        }
-
+        $dir = dirname($file);
+        File::mkDir($dir);
         // 以写入模式打开文件
         $fp = @fopen($file, 'w');
         if (!$fp) {
@@ -173,11 +169,7 @@ class FileCacheDriver implements iCacheDriver
     {
         $file = $this->getFilePath($key);
         if (is_file($file)) {
-            try {
-                unlink($file);
-            } catch (\Exception $e) {
-                return false;
-            }
+            File::del($file,true);
         }
         return true;
     }
@@ -191,7 +183,7 @@ class FileCacheDriver implements iCacheDriver
      */
     public function clear(): bool
     {
-        File::del($this->baseDir);
+        File::del($this->baseDir,true);
         return true;
     }
 
@@ -206,7 +198,7 @@ class FileCacheDriver implements iCacheDriver
     public function deleteKeyStartWith(string $key): bool
     {
         $dir = dirname($this->getFilePath($key));
-        File::del($dir);
+        File::del($dir,true);
         return true;
     }
 
@@ -278,7 +270,6 @@ class FileCacheDriver implements iCacheDriver
             if (!$fileInfo->isFile()) {
                 continue;
             }
-
             $path = $fileInfo->getPathname();
             $fp   = @fopen($path, 'r');
             if (!$fp) {
