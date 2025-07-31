@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace nova\framework\cache;
 
 use Exception;
+use nova\framework\core\File;
 use nova\framework\core\Logger;
 
 /**
@@ -190,7 +191,7 @@ class FileCacheDriver implements iCacheDriver
      */
     public function clear(): bool
     {
-        $this->deleteDirectory($this->baseDir);
+        File::del($this->baseDir);
         return true;
     }
 
@@ -205,9 +206,7 @@ class FileCacheDriver implements iCacheDriver
     public function deleteKeyStartWith(string $key): bool
     {
         $dir = dirname($this->getFilePath($key));
-        if (is_dir($dir)) {
-            $this->deleteDirectory($dir);
-        }
+        File::del($dir);
         return true;
     }
 
@@ -292,11 +291,7 @@ class FileCacheDriver implements iCacheDriver
 
             // 删除过期文件
             if ($expire !== 0 && $expire < $now) {
-                try {
-                    @unlink($path);
-                } catch (\Exception $e) {
-                    // 忽略删除失败的错误
-                }
+                File::del($path);
                 if ($maxCount && ++$n >= $maxCount) {
                     break;
                 }
@@ -304,35 +299,6 @@ class FileCacheDriver implements iCacheDriver
         }
     }
 
-    /**
-     * 递归删除目录及其内容
-     *
-     * @param string $dir 要删除的目录路径
-     */
-    private function deleteDirectory(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-
-        // 遍历目录内容
-        foreach (array_diff(scandir($dir), ['.', '..']) as $f) {
-            $p = $dir . '/' . $f;
-            try {
-                // 递归删除子目录或直接删除文件
-                is_dir($p) ? $this->deleteDirectory($p) : @unlink($p);
-            } catch (\Exception $e) {
-                // 忽略删除失败的错误
-            }
-        }
-
-        // 删除空目录
-        try {
-            @rmdir($dir);
-        } catch (\Exception $e) {
-            // 忽略删除失败的错误
-        }
-    }
 
     /**
      * 根据键名生成缓存文件路径

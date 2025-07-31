@@ -210,22 +210,18 @@ class File
 
             if (is_dir($dir)) {
                 $files = scandir($dir);
+                if(!$files) return;
                 foreach ($files as $file) {
                     if ($file != '.' && $file != '..') {
                         self::del($dir . DIRECTORY_SEPARATOR . $file);
                     }
                 }
-                if (!rmdir($dir)) {
-                    throw new \Exception("删除目录失败");
-                }
+                rmdir($dir);
             } else {
-                if (!unlink($dir)) {
-                    throw new \Exception("删除文件失败");
-                }
+                unlink($dir);
             }
         } catch (\Exception $e) {
-            error_log("删除失败: " . $e->getMessage());
-            throw $e;
+
         }
     }
 }
