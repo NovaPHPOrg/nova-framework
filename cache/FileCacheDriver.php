@@ -13,6 +13,7 @@ namespace nova\framework\cache;
 use Exception;
 use nova\framework\core\File;
 use nova\framework\core\Logger;
+use nova\framework\exception\ErrorException;
 
 /**
  * 文件缓存驱动类
@@ -65,12 +66,17 @@ class FileCacheDriver implements iCacheDriver
 
         // 获取缓存文件路径
         $file = $this->getFilePath($key);
-        if (!is_file($file)) {
+        if (!File::exists($file)) {
             return $default;
         }
 
         // 以只读模式打开文件
-        $fp = @fopen($file, 'r');
+        try{
+            $fp = fopen($file, 'r');
+        }catch (ErrorException $exception){
+            //不存在导致无法读取
+            return $default;
+        }
         if (!$fp) {
             return $default;
         }
@@ -131,7 +137,16 @@ class FileCacheDriver implements iCacheDriver
         $dir = dirname($file);
         File::mkDir($dir);
         // 以写入模式打开文件
-        $fp = @fopen($file, 'w');
+        try{
+            $fp = fopen($file, 'w');
+        }catch (ErrorException $exception){
+            try {
+                File::mkDir($dir);
+                $fp = fopen($file, 'w');
+            }catch (Exception $exception){
+                return false;
+            }
+        }
         if (!$fp) {
             return false;
         }
