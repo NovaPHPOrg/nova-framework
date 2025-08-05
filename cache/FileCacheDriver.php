@@ -286,8 +286,12 @@ class FileCacheDriver implements iCacheDriver
                 continue;
             }
             $path = $fileInfo->getPathname();
-            $fp   = @fopen($path, 'r');
-            if (!$fp) {
+            try{
+                $fp   = fopen($path, 'r');
+                if (!$fp) {
+                    continue;
+                }
+            }catch (\ErrorException $exception){
                 continue;
             }
 
