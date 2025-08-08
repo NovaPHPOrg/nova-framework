@@ -50,25 +50,7 @@ class FileCacheDriver implements iCacheDriver
 
     /* ===================== 对外接口 ===================== */
 
-    /**
-     * 获取缓存值
-     *
-     * 读取缓存文件，检查是否过期，返回对应的值或默认值
-     *
-     * @param  string $key     缓存键名
-     * @param  mixed  $default 默认值，当缓存不存在或已过期时返回
-     * @return mixed  缓存值或默认值
-     */
-    public function get(string $key, mixed $default = null): mixed
-    {
-        // 随机触发垃圾回收
-        $this->maybeGc();
-
-        // 获取缓存文件路径
-        $file = $this->getFilePath($key);
-        if (!File::exists($file)) {
-            return $default;
-        }
+    public function getFile(string $file, mixed $default = null): mixed{
 
         // 以只读模式打开文件
         try{
@@ -115,6 +97,29 @@ class FileCacheDriver implements iCacheDriver
                 File::del($file,true);
             }
         }
+    }
+
+    /**
+     * 获取缓存值
+     *
+     * 读取缓存文件，检查是否过期，返回对应的值或默认值
+     *
+     * @param  string $key     缓存键名
+     * @param  mixed  $default 默认值，当缓存不存在或已过期时返回
+     * @return mixed  缓存值或默认值
+     */
+    public function get(string $key, mixed $default = null): mixed
+    {
+        // 随机触发垃圾回收
+        $this->maybeGc();
+
+        // 获取缓存文件路径
+        $file = $this->getFilePath($key);
+        if (!File::exists($file)) {
+            return $default;
+        }
+
+        return $this->getFile($file, $default);
     }
 
     /**
@@ -267,12 +272,12 @@ class FileCacheDriver implements iCacheDriver
      * @param string $startKey 起始键名，用于分片清理
      * @param int    $maxCount 最大清理数量，0 表示无限制
      */
-    public function gc(string $startKey, int $maxCount): void
+    public function gc(string $startKey, int $maxCount): bool
     {
         $now  = time();
         $dir = $this->baseDir.DS.$startKey;
         if (!file_exists($dir)) {
-            return;
+            return false;
         }
 
         // 递归遍历目录
@@ -307,6 +312,7 @@ class FileCacheDriver implements iCacheDriver
                 }
             }
         }
+        return true;
     }
 
 
@@ -337,5 +343,31 @@ class FileCacheDriver implements iCacheDriver
 
         // 拼接完整路径
         return $this->baseDir . implode('/', $parts) . '.cache';
+    }
+
+    /**
+     * 获取指定起始键名开始的所有缓存项
+     *
+     * 遍历指定目录下的所有缓存文件，读取文件内容并返回键值对数组
+     * 注意：由于文件路径是通过MD5散列生成的，返回的键名是文件路径而不是原始键名
+     *
+     * @param  string $startKey 起始键名
+     * @return array  缓存项数组，键为文件路径，值为缓存值
+     */
+    public function getAll(string $startKey): array
+    {
+        $result = [];
+        $dir = $this->baseDir.DS.$startKey;
+        if (!file_exists($dir)) {
+            return [];
+        }
+        $files = glob($dir . '/*.cache');
+        
+        foreach ($files as $fileInfo) {
+            $data = $this->getFile($fileInfo,null);
+            if ($data == null) continue;
+        }
+
+        return $result;
     }
 }
