@@ -50,54 +50,6 @@ class FileCacheDriver implements iCacheDriver
 
     /* ===================== 对外接口 ===================== */
 
-    public function getFile(string $file, mixed $default = null): mixed{
-
-        // 以只读模式打开文件
-        try{
-            $fp = fopen($file, 'r');
-        }catch (ErrorException $exception){
-            //不存在导致无法读取
-            return $default;
-        }
-        if (!$fp) {
-            return $default;
-        }
-
-        $expired = false;
-
-        try {
-            // 获取共享锁（读锁）
-            if (!flock($fp, LOCK_SH)) {
-                return $default;
-            }
-
-            // ① 读取前 10 字节作为过期时间戳
-            $expire = (int)fread($fp, 10);
-            if ($expire !== 0 && $expire < time()) {
-                $expired = true;      // 标记为过期，稍后删除
-                return $default;
-            }
-
-            // ② 读取剩余内容并反序列化
-            try {
-                $value = @unserialize(stream_get_contents($fp));
-                return ($value === false) ? $default : $value;
-            } catch (Exception $exception) {
-                Logger::error("FileCache Exception:".$exception->getMessage(), $exception->getTrace());
-                return $default;
-            }
-
-        } finally {
-            // 确保资源正确释放
-            if (is_resource($fp)) {          // 避免二次 flock/fclose
-                flock($fp, LOCK_UN);         // 释放锁
-                fclose($fp);                 // 关闭文件
-            }
-            if ($expired) {                  // 安全删除过期文件
-                File::del($file,true);
-            }
-        }
-    }
 
     /**
      * 获取缓存值
@@ -118,8 +70,8 @@ class FileCacheDriver implements iCacheDriver
         if (!File::exists($file)) {
             return $default;
         }
-
-        return $this->getFile($file, $default);
+        [$key, $value] = $this->readFileWithKey($file,$default);
+        return $value;
     }
 
     /**
@@ -134,50 +86,94 @@ class FileCacheDriver implements iCacheDriver
      */
     public function set(string $key, mixed $value, ?int $expire): bool
     {
-        // 随机触发垃圾回收
         $this->maybeGc();
 
-        // 获取缓存文件路径
         $file = $this->getFilePath($key);
         $dir = dirname($file);
         File::mkDir($dir);
-        // 以写入模式打开文件
-        try{
+
+        try {
             $fp = fopen($file, 'w');
-        }catch (ErrorException $exception){
+        } catch (ErrorException $exception) {
             try {
                 File::mkDir($dir);
                 $fp = fopen($file, 'w');
-            }catch (Exception $exception){
+            } catch (Exception) {
                 return false;
             }
         }
+
         if (!$fp) {
             return false;
         }
 
         try {
-            // 获取排他锁（写锁）
             if (!flock($fp, LOCK_EX)) {
                 return false;
             }
 
-            // 计算过期时间戳
             $ttl = (int)$expire;
-            $ts  = $ttl === 0 ? 0 : time() + $ttl;   // 0 = 永不过期
+            $ts  = $ttl === 0 ? 0 : time() + $ttl;
 
-            // 写入 10 字节的过期时间戳（固定长度）
+            // 写入过期时间戳（10字节）
             fwrite($fp, sprintf('%010d', $ts));
 
-            // 写入序列化的数据
+            // 写入原始 key 长度（2字节）和 key 内容（兼容 getAll）
+            $keyLen = strlen($key);
+            fwrite($fp, pack('n', $keyLen)); // 2 字节长度
+            fwrite($fp, $key);
+
+            // 写入序列化后的数据
             fwrite($fp, serialize($value));
+
         } finally {
-            // 释放锁并关闭文件
             flock($fp, LOCK_UN);
             fclose($fp);
         }
+
         return true;
     }
+    private function readFileWithKey(string $file, mixed $default = null): array
+    {
+        $fp = @fopen($file, 'r');
+        if (!$fp)  return [$file, $default];
+
+        $expired = false;
+
+        try {
+            if (!flock($fp, LOCK_SH)) return [$file, $default];
+
+            $expire = (int)fread($fp, 10);
+            if ($expire !== 0 && $expire < time()) {
+                $expired = true;
+                return [$file, $default];
+            }
+
+            $peek = fread($fp, 2);
+            if (strlen($peek) < 2) {
+                // 旧格式（无原始键名）
+                $value = @unserialize(stream_get_contents($fp));
+                if ($value === false) return [$file, $default];
+                return [$file, $value]; // 用路径作 key fallback
+            }
+
+            $keyLen = unpack('n', $peek)[1];
+            $origKey = fread($fp, $keyLen);
+
+            $value = @unserialize(stream_get_contents($fp));
+            if ($value === false) return [$origKey, $default];
+
+            return [$origKey, $value];
+
+        } finally {
+            if (is_resource($fp)) {          // 避免二次 flock/fclose
+                flock($fp, LOCK_UN);         // 释放锁
+                fclose($fp);                 // 关闭文件
+            }
+            if ($expired) File::del($file, true);
+        }
+    }
+
 
     /**
      * 删除指定的缓存项
@@ -217,7 +213,7 @@ class FileCacheDriver implements iCacheDriver
      */
     public function deleteKeyStartWith(string $key): bool
     {
-        $dir = dirname($this->getFilePath($key));
+        $dir = dirname($this->getFilePath($key."/default"));
         File::del($dir,true);
         return true;
     }
@@ -357,17 +353,22 @@ class FileCacheDriver implements iCacheDriver
     public function getAll(string $startKey): array
     {
         $result = [];
-        $dir = $this->baseDir.DS.$startKey;
+        $dir = dirname($this->getFilePath($startKey."/default"));
         if (!file_exists($dir)) {
             return [];
         }
+
         $files = glob($dir . '/*.cache');
-        
+        if (!$files) return [];
+
         foreach ($files as $fileInfo) {
-            $data = $this->getFile($fileInfo,null);
-            if ($data == null) continue;
+            [$key, $value] = $this->readFileWithKey($fileInfo);
+            if ($value === null) continue;
+
+            $result[$key] = $value;
         }
 
         return $result;
     }
+
 }
