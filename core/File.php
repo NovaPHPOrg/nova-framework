@@ -111,7 +111,7 @@ class File
      */
     public static function mkDir($dir): bool
     {
-        Logger::info("File::mkDir $dir",(new \Exception())->getTrace());
+        //Logger::info("File::mkDir $dir",(new \Exception())->getTrace());
         if (!self::exists($dir)) {
             try {
                 mkdir($dir, 0755, true);
@@ -204,7 +204,7 @@ class File
     {
         try {
 
-            Logger::info("File::delete($onlyFile) $dir",(new \Exception())->getTrace());
+           // Logger::info("File::delete($onlyFile) $dir",(new \Exception())->getTrace());
 
             if (!file_exists($dir)) {
                 return;
