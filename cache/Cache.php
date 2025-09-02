@@ -113,7 +113,7 @@ class Cache
     /**
      * 垃圾回收机制
      * 清理指定起始键名开始的缓存项，最多清理指定数量
-     * @param string $startKey 起始键名
+     * @param  string $startKey 起始键名
      * @return bool   是否清理成功
      */
     public function gc(string $startKey)
@@ -126,7 +126,8 @@ class Cache
      * @param  string $startKey 起始键名
      * @return array  缓存项数组，键为缓存键名，值为缓存值
      */
-    public function getAll(string $startKey): array{
+    public function getAll(string $startKey): array
+    {
         return  $this->driver->getAll($startKey);
     }
 }

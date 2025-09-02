@@ -72,7 +72,7 @@ interface iCacheDriver
      * 垃圾回收机制
      * 清理指定起始键名开始的缓存项，最多清理指定数量
      * @param  string $startKey 起始键名
-     * @param  int    $maxCount  最大清理数量
+     * @param  int    $maxCount 最大清理数量
      * @return bool   是否清理成功
      */
     public function gc(string $startKey, int $maxCount): bool;

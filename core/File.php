@@ -99,7 +99,7 @@ class File
             closedir($dir);
             return $success;
         } catch (\ErrorException $e) {
-            Logger::error("复制失败: " . $e->getMessage(),$e->getTrace());
+            Logger::error("复制失败: " . $e->getMessage(), $e->getTrace());
             return false;
         }
     }
@@ -117,8 +117,10 @@ class File
                 mkdir($dir, 0755, true);
                 return true;
             } catch (\ErrorException $e) {
-                if(str_contains($e->getMessage(), 'File exists')) return true;
-                Logger::error("创建目录失败: " . $e->getMessage(),$e->getTrace());
+                if (str_contains($e->getMessage(), 'File exists')) {
+                    return true;
+                }
+                Logger::error("创建目录失败: " . $e->getMessage(), $e->getTrace());
                 return false;
             }
         }
@@ -150,7 +152,7 @@ class File
             }
             return false;
         } catch (\ErrorException $e) {
-            Logger::error("复制文件失败: " . $e->getMessage(),$e->getTrace());
+            Logger::error("复制文件失败: " . $e->getMessage(), $e->getTrace());
             return false;
         }
     }
@@ -190,7 +192,7 @@ class File
                 throw new \Exception("写入文件失败");
             }
         } catch (\ErrorException $e) {
-            Logger::error("删除文件或目录失败: " . $e->getMessage(),$e->getTrace());
+            Logger::error("删除文件或目录失败: " . $e->getMessage(), $e->getTrace());
             throw $e;
         }
     }
@@ -200,11 +202,11 @@ class File
      * @param  string     $dir 文件或目录路径
      * @throws \Exception 删除失败时抛出异常
      */
-    public static function del(string $dir,bool $onlyFile = false): void
+    public static function del(string $dir, bool $onlyFile = false): void
     {
         try {
 
-           // Logger::info("File::delete($onlyFile) $dir",(new \Exception())->getTrace());
+            // Logger::info("File::delete($onlyFile) $dir",(new \Exception())->getTrace());
 
             if (!file_exists($dir)) {
                 return;
@@ -212,19 +214,25 @@ class File
 
             if (is_dir($dir)) {
                 $files = scandir($dir);
-                if(!$files) return;
+                if (!$files) {
+                    return;
+                }
                 foreach ($files as $file) {
                     if ($file != '.' && $file != '..') {
-                        self::del($dir . DIRECTORY_SEPARATOR . $file,$onlyFile);
+                        self::del($dir . DIRECTORY_SEPARATOR . $file, $onlyFile);
                     }
                 }
-                if(!$onlyFile) rmdir($dir);
+                if (!$onlyFile) {
+                    rmdir($dir);
+                }
             } else {
                 unlink($dir);
             }
         } catch (\ErrorException $e) {
-            if(str_contains($e->getMessage(), 'No such file or directory')) return;
-            Logger::error("删除文件或目录失败: " . $e->getMessage(),$e->getTrace());
+            if (str_contains($e->getMessage(), 'No such file or directory')) {
+                return;
+            }
+            Logger::error("删除文件或目录失败: " . $e->getMessage(), $e->getTrace());
         }
     }
 }

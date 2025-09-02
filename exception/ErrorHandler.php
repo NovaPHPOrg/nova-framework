@@ -48,11 +48,11 @@ class ErrorHandler
      *
      * 将PHP错误转换为异常，统一错误处理流程
      *
-     * @param int $errno 错误级别
-     * @param string $err_str 错误信息
-     * @param string $err_file 错误文件
-     * @param int $err_line 错误行号
-     * @return void 是否处理了错误
+     * @param  int            $errno    错误级别
+     * @param  string         $err_str  错误信息
+     * @param  string         $err_file 错误文件
+     * @param  int            $err_line 错误行号
+     * @return void           是否处理了错误
      * @throws ErrorException
      */
     public static function appError(int $errno, string $err_str, string $err_file = '', int $err_line = 0): void
@@ -65,7 +65,7 @@ class ErrorHandler
             default => "ERROR"
         };
 
-       throw new ErrorException("$str: $err_str in $err_file on line $err_line");
+        throw new ErrorException("$str: $err_str in $err_file on line $err_line");
     }
 
     /**

@@ -12,7 +12,6 @@ namespace nova\framework\cache;
 
 use Exception;
 use nova\framework\core\File;
-use nova\framework\core\Logger;
 use nova\framework\exception\ErrorException;
 
 /**
@@ -50,7 +49,6 @@ class FileCacheDriver implements iCacheDriver
 
     /* ===================== 对外接口 ===================== */
 
-
     /**
      * 获取缓存值
      *
@@ -70,7 +68,7 @@ class FileCacheDriver implements iCacheDriver
         if (!File::exists($file)) {
             return $default;
         }
-        [$key, $value] = $this->readFileWithKey($file,$default);
+        [$key, $value] = $this->readFileWithKey($file, $default);
         return $value;
     }
 
@@ -136,12 +134,16 @@ class FileCacheDriver implements iCacheDriver
     private function readFileWithKey(string $file, mixed $default = null): array
     {
         $fp = @fopen($file, 'r');
-        if (!$fp)  return [$file, $default];
+        if (!$fp) {
+            return [$file, $default];
+        }
 
         $expired = false;
 
         try {
-            if (!flock($fp, LOCK_SH)) return [$file, $default];
+            if (!flock($fp, LOCK_SH)) {
+                return [$file, $default];
+            }
 
             $expire = (int)fread($fp, 10);
             if ($expire !== 0 && $expire < time()) {
@@ -153,7 +155,9 @@ class FileCacheDriver implements iCacheDriver
             if (strlen($peek) < 2) {
                 // 旧格式（无原始键名）
                 $value = @unserialize(stream_get_contents($fp));
-                if ($value === false) return [$file, $default];
+                if ($value === false) {
+                    return [$file, $default];
+                }
                 return [$file, $value]; // 用路径作 key fallback
             }
 
@@ -161,7 +165,9 @@ class FileCacheDriver implements iCacheDriver
             $origKey = fread($fp, $keyLen);
 
             $value = @unserialize(stream_get_contents($fp));
-            if ($value === false) return [$origKey, $default];
+            if ($value === false) {
+                return [$origKey, $default];
+            }
 
             return [$origKey, $value];
 
@@ -170,10 +176,11 @@ class FileCacheDriver implements iCacheDriver
                 flock($fp, LOCK_UN);         // 释放锁
                 fclose($fp);                 // 关闭文件
             }
-            if ($expired) File::del($file, true);
+            if ($expired) {
+                File::del($file, true);
+            }
         }
     }
-
 
     /**
      * 删除指定的缓存项
@@ -185,7 +192,7 @@ class FileCacheDriver implements iCacheDriver
     {
         $file = $this->getFilePath($key);
         if (is_file($file)) {
-            File::del($file,true);
+            File::del($file, true);
         }
         return true;
     }
@@ -199,7 +206,7 @@ class FileCacheDriver implements iCacheDriver
      */
     public function clear(): bool
     {
-        File::del($this->baseDir,true);
+        File::del($this->baseDir, true);
         return true;
     }
 
@@ -214,7 +221,7 @@ class FileCacheDriver implements iCacheDriver
     public function deleteKeyStartWith(string $key): bool
     {
         $dir = dirname($this->getFilePath($key."/default"));
-        File::del($dir,true);
+        File::del($dir, true);
         return true;
     }
 
@@ -287,12 +294,12 @@ class FileCacheDriver implements iCacheDriver
                 continue;
             }
             $path = $fileInfo->getPathname();
-            try{
+            try {
                 $fp   = fopen($path, 'r');
                 if (!$fp) {
                     continue;
                 }
-            }catch (\ErrorException $exception){
+            } catch (\ErrorException $exception) {
                 continue;
             }
 
@@ -310,7 +317,6 @@ class FileCacheDriver implements iCacheDriver
         }
         return true;
     }
-
 
     /**
      * 根据键名生成缓存文件路径
@@ -359,11 +365,15 @@ class FileCacheDriver implements iCacheDriver
         }
 
         $files = glob($dir . '/*.cache');
-        if (!$files) return [];
+        if (!$files) {
+            return [];
+        }
 
         foreach ($files as $fileInfo) {
             [$key, $value] = $this->readFileWithKey($fileInfo);
-            if ($value === null) continue;
+            if ($value === null) {
+                continue;
+            }
 
             $result[$key] = $value;
         }
