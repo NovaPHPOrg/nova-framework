@@ -619,86 +619,141 @@ class Response extends NovaApp
     }
 
     /**
-     * 预加载资源
-     * 通过Link header实现资源预加载，优化页面加载性能
-     * @param string $data HTML内容
+     * 获取静态文件版本号
+     * 基于文件修改时间生成版本参数，实现缓存控制
+     * @param string $path 静态文件路径
+     * @return string 带版本参数的路径
      */
-    private function preLoad($data): void
+    private function addStaticVersion(string $path): string
     {
-        if ($this->isHead()) {
-            return;
+        // 只处理 /static 开头的路径
+        if (!str_starts_with($path, '/static/')) {
+            return $path;
         }
-        if ($this->context->request()->isPjax()) {
-            return;
+        
+        // 避免重复添加版本参数
+        if (str_contains($path, '?v=')) {
+            return $path;
         }
+        
+        // 获取文件的实际路径
+        $filePath = PUBLIC_PATH . $path;
+        if (file_exists($filePath)) {
+            $version = filemtime($filePath);
+        } else {
+            // 文件不存在时使用当前时间戳
+            $version = time();
+        }
+        
+        return $path . '?v=' . $version;
+    }
+
+    /**
+     * 处理HTML中的静态资源
+     * 为/static路径的资源添加版本参数，并生成preload headers
+     * @param string $data HTML内容
+     * @return string 处理后的HTML内容
+     */
+    private function processStaticResources(string $data): string
+    {
+        if ($this->isHead() || $this->context->request()->isPjax()) {
+            return $data;
+        }
+        
         try {
-            $count = 20;
             libxml_use_internal_errors(true);
-
             $dom = new DOMDocument();
-            $dom->loadHTML($data);
-
-            $push = " ";
-
-            // 处理 script 标签，只加载 .js 后缀
+            $dom->loadHTML($data, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+            
+            $preloadLinks = [];
+            $count = 20;
+            
+            // 处理 script 标签
             $scripts = $dom->getElementsByTagName('script');
             foreach ($scripts as $script) {
                 if ($script->hasAttribute('src')) {
                     $src = $script->getAttribute('src');
-                    if (str_ends_with($src, '.js')) {
-                        $push .= "<{$src}>; rel=preload; as=script; nopush,";
+                    $newSrc = $this->addStaticVersion($src);
+                    
+                    if ($newSrc !== $src) {
+                        $script->setAttribute('src', $newSrc);
+                    }
+                    
+                    // 添加到预加载列表
+                    if (str_ends_with($src, '.js') && $count > 0) {
+                        $preloadLinks[] = "<{$newSrc}>; rel=preload; as=script; nopush";
                         $count--;
                     }
                 }
             }
-
-            // 处理 link 标签，只加载 css 和字体
+            
+            // 处理 link 标签
             $links = $dom->getElementsByTagName('link');
             foreach ($links as $link) {
                 if ($link->hasAttribute('href')) {
                     $href = $link->getAttribute('href');
-                    $rel = $link->getAttribute('rel');
-
-                    // 只处理 stylesheet 和 icon/font
-                    if ($rel === 'stylesheet' && str_ends_with($href, '.css')) {
-                        $push .= "<{$href}>; rel=preload; as=style; nopush,";
-                        $count--;
-                    } elseif ($rel === 'font') {
-                        $push .= "<{$href}>; rel=preload; as=font; nopush,";
-                        $count--;
+                    $newHref = $this->addStaticVersion($href);
+                    
+                    if ($newHref !== $href) {
+                        $link->setAttribute('href', $newHref);
                     }
-                }
-            }
-
-            // 处理 img 标签，排除 base64 和 ico
-            $imgs = $dom->getElementsByTagName('img');
-            foreach ($imgs as $img) {
-                if ($img->hasAttribute('src')) {
-                    $src = $img->getAttribute('src');
-                    // 排除 base64 和 ico 图片
-                    if (!str_contains($src, 'data:') && !str_ends_with($src, '.ico')) {
-                        $push .= "<{$src}>; rel=preload; as=image; nopush,";
-                        if ($count-- <= 0) {
-                            break;
+                    
+                    // 添加到预加载列表
+                    $rel = $link->getAttribute('rel');
+                    if ($count > 0) {
+                        if ($rel === 'stylesheet' && str_ends_with($href, '.css')) {
+                            $preloadLinks[] = "<{$newHref}>; rel=preload; as=style; nopush";
+                            $count--;
+                        } elseif ($rel === 'font') {
+                            $preloadLinks[] = "<{$newHref}>; rel=preload; as=font; nopush";
+                            $count--;
                         }
                     }
                 }
             }
-
+            
+            // 处理 img 标签
+            $imgs = $dom->getElementsByTagName('img');
+            foreach ($imgs as $img) {
+                if ($img->hasAttribute('src')) {
+                    $src = $img->getAttribute('src');
+                    $newSrc = $this->addStaticVersion($src);
+                    
+                    if ($newSrc !== $src) {
+                        $img->setAttribute('src', $newSrc);
+                    }
+                    
+                    // 添加到预加载列表（排除 base64 和 ico）
+                    if ($count > 0 && !str_contains($src, 'data:') && !str_ends_with($src, '.ico')) {
+                        $preloadLinks[] = "<{$newSrc}>; rel=preload; as=image; nopush";
+                        $count--;
+                    }
+                }
+            }
+            
             if (libxml_get_errors()) {
                 libxml_clear_errors();
             }
-
-            // 移除最后一个逗号并设置 header
-            $push = rtrim($push, ',');
-            if (!empty(trim($push))) {
-                $this->header['Link'] = $push;
+            
+            // 设置预加载头
+            if (!empty($preloadLinks)) {
+                $this->header['Link'] = ' ' . implode(',', $preloadLinks);
             }
-
+            
+            return $dom->saveHTML();
+            
         } catch (Exception $e) {
-            Logger::error("Preload error: " . $e->getMessage());
+            Logger::error("Static resource processing error: " . $e->getMessage());
+            return $data;
         }
+    }
 
+    /**
+     * @deprecated 使用 processStaticResources 替代
+     */
+    private function preLoad($data): void
+    {
+        // 空实现，功能已合并到 processStaticResources
     }
 
     /**
@@ -707,7 +762,8 @@ class Response extends NovaApp
     private function sendHtml(): void
     {
         $data = $this->data;
-        $this->preLoad($data);
+        // 处理静态资源：添加版本参数并生成预加载头
+        $data = $this->processStaticResources($data);
         $this->sendHeaders();
         if ($this->isHead()) {
             return;
