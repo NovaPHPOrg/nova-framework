@@ -748,13 +748,6 @@ class Response extends NovaApp
         }
     }
 
-    /**
-     * @deprecated 使用 processStaticResources 替代
-     */
-    private function preLoad($data): void
-    {
-        // 空实现，功能已合并到 processStaticResources
-    }
 
     /**
      * 发送HTML格式响应
