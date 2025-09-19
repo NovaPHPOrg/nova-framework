@@ -76,6 +76,7 @@ function file_type(string $filename): string
         'tif' => 'image/tiff',
         'svg' => 'image/svg+xml',
         'svgz' => 'image/svg+xml',
+        'webp' => 'image/webp',
         // 压缩文件
         'zip' => 'application/zip',
         'rar' => 'application/x-rar-compressed',
