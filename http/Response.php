@@ -196,9 +196,11 @@ class Response extends NovaApp
     private function withSSE(): void
     {
         $this->header['Content-Type'] = 'text/event-stream';
-        $this->header['Cache-Control'] = 'no-cache, no-transform';
+        $this->header['Cache-Control'] = 'no-cache';
         $this->header['Connection'] = 'keep-alive';
         $this->header['X-Accel-Buffering'] = 'no';
+        // ini_set('output_buffering', 'off');
+        // ini_set('zlib.output_compression', false);
     }
 
     /**
@@ -437,26 +439,22 @@ class Response extends NovaApp
         if ($this->isHead()) {
             return;
         }
-        if (function_exists('apache_setenv')) {
-            @apache_setenv('no-gzip', '1');
-        }
-        @ini_set('output_buffering', 'off');
-        @ini_set('zlib.output_compression', '0');
-        while (ob_get_level() > 0) {
-            @ob_end_flush();
-        }
-
-        @ob_implicit_flush(true);
         $callback(function ($data, $event = null) {
-            if ($data === null) {
+            if ($data == null) {
                 return;
             }
-            if ($event !== null && $event !== '') {
-                echo "event: $event\n";
+            echo "event: $event\n";
+            echo "data: " . $data . "\n\n";
+            ob_flush();
+            flush();
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
             }
-            echo 'data: ' . $data . "\n\n";
-            @flush();
         });
+        while (!connection_aborted()) {
+            sleep(1);
+        }
+
     }
 
     /**
