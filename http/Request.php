@@ -168,7 +168,13 @@ class Request
      */
     public function getDomainNoPort(): string
     {
-        return $_SERVER["SERVER_NAME"];
+        $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
+        if ($host === '') {
+            return '';
+        }
+        $scheme = $this->getHttpScheme();
+        $parsed = parse_url($scheme . $host, PHP_URL_HOST);
+        return $parsed ?: $host;
     }
 
     /**
