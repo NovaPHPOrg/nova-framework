@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace nova\framework;
 
 use Error;
-use http\Exception\RuntimeException;
+use RuntimeException;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\core\NovaApp;
