@@ -172,6 +172,7 @@ class App extends NovaApp
     {
         try {
             if ($response) {
+                EventManager::trigger("app.send", $response);
                 $response->send();
                 Logger::debug("Response sent successfully");
             }

@@ -43,6 +43,12 @@ class Response extends NovaApp
     /** @var ResponseType 响应类型 */
     protected ResponseType $type;
 
+
+    public function code():int
+    {
+        return $this->code;
+    }
+
     /**
      * 构造函数
      * @param mixed        $data   响应数据
