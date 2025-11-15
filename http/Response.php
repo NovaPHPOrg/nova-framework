@@ -553,12 +553,18 @@ class Response extends NovaApp
     /**
      * 发送静态文件响应
      * 支持缓存控制和条件请求
+     * 
+     * 优化要点：
+     * - 使用 filemtime+filesize 生成 ETag，避免 md5_file 的性能开销
+     * - 用 pathinfo 替代正则匹配，提升性能
+     * - 优化文件类型判断逻辑
      */
     private function sendStatic(): void
     {
         $addr = $this->data;
         $addr = $this->filterFilePath($addr);
         Logger::debug("Response file: $addr");
+        
         // 验证文件是否存在且可读
         if (!file_exists($addr) || !is_readable($addr)) {
             $this->code = 404;
@@ -568,9 +574,15 @@ class Response extends NovaApp
             echo "File not found.";
             return;
         }
+        
+        // 获取文件信息
         $this->header["Content-Type"] = file_type($addr);
         $lastModifiedTime = filemtime($addr);
-        $etag = md5_file($addr);
+        $fileSize = filesize($addr);
+        
+        // 优化：使用 filemtime + filesize 生成 ETag，避免 md5_file 的性能开销
+        $etag = sprintf('"%x-%x"', $lastModifiedTime, $fileSize);
+        
         // 检查 If-Modified-Since 和 If-None-Match 头
         if (
             (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= $lastModifiedTime) ||
@@ -581,31 +593,62 @@ class Response extends NovaApp
             Logger::debug("File not modified: $addr");
             return;
         }
-
-        if (preg_match("/.*\.(gif|jpg|jpeg|png|bmp|swf|woff|woff2)?$/", $addr)) {
-            $this->cache(60 * 24 * 365);
-        } elseif (preg_match("/.*\.(js|css)?$/", $addr)) {
-            $this->cache(60 * 24 * 180);
-        } elseif (preg_match("/.*\.(html|htm)?$/", $addr)) {
-            $this->cache(60);
-            $this->preLoad(file_get_contents($addr));
+        
+        // 优化：使用 pathinfo 替代正则，性能更好
+        $ext = strtolower(pathinfo($addr, PATHINFO_EXTENSION));
+        
+        // 根据文件类型设置缓存策略
+        switch ($ext) {
+            case 'gif':
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+            case 'bmp':
+            case 'webp':
+            case 'svg':
+            case 'ico':
+            case 'woff':
+            case 'woff2':
+            case 'ttf':
+            case 'eot':
+                // 图片和字体：1年缓存
+                $this->cache(60 * 24 * 365);
+                break;
+            case 'js':
+            case 'css':
+                // JS/CSS：180天缓存
+                $this->cache(60 * 24 * 180);
+                break;
+            case 'html':
+            case 'htm':
+                // HTML：1小时缓存
+                $this->cache(60);
+                // 只对HTML预加载
+                $this->preLoad(file_get_contents($addr));
+                break;
+            default:
+                // 其他文件：1天缓存
+                $this->cache(60 * 24);
         }
+        
         // 设置 Last-Modified 和 ETag 头
         $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";
         $this->header["ETag"] = $etag;
-
-        // 清空输出缓冲区，确保文件流输出正确
+        
+        // 发送响应头
         $this->sendHeaders();
         if ($this->isHead()) {
             return;
         }
+        
         Logger::debug("Send static file: $addr");
-        // 读取并输出文件内容
+        
+        // 触发事件并输出文件内容
         $output = EventManager::trigger("response.static.before", $addr, true);
         if ($output !== true) {
             readfile($addr);
         }
-
+        
         EventManager::trigger("response.static.after", $addr);
     }
 
