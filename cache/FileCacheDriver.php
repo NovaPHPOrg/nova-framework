@@ -171,6 +171,9 @@ class FileCacheDriver implements iCacheDriver
 
             return [$origKey, $value];
 
+        }catch (ErrorException $exception) {
+            File::del($file, true);
+            return [$file, $default];
         } finally {
             if (is_resource($fp)) {          // 避免二次 flock/fclose
                 flock($fp, LOCK_UN);         // 释放锁
