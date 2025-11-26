@@ -11,8 +11,8 @@ declare(strict_types=1);
 namespace nova\framework\cache;
 
 use Exception;
+use ErrorException;
 use nova\framework\core\File;
-use nova\framework\exception\ErrorException;
 
 /**
  * 文件缓存驱动类
@@ -90,20 +90,16 @@ class FileCacheDriver implements iCacheDriver
         $dir = dirname($file);
         File::mkDir($dir);
 
-        try {
-            $fp = fopen($file, 'w');
-        } catch (ErrorException $exception) {
-            try {
-                File::mkDir($dir);
-                $fp = fopen($file, 'w');
-            } catch (Exception) {
-                return false;
-            }
-        }
+        // 使用临时文件，避免直接覆盖导致数据损坏
+        $tmpFile = $file . '.' . uniqid('tmp', true);
+
+        $fp = fopen($tmpFile, 'w');
 
         if (!$fp) {
             return false;
         }
+
+        $success = false;
 
         try {
             if (!flock($fp, LOCK_EX)) {
@@ -114,22 +110,41 @@ class FileCacheDriver implements iCacheDriver
             $ts  = $ttl === 0 ? 0 : time() + $ttl;
 
             // 写入过期时间戳（10字节）
-            fwrite($fp, sprintf('%010d', $ts));
+            if (fwrite($fp, sprintf('%010d', $ts)) === false) {
+                return false;
+            }
 
-            // 写入原始 key 长度（2字节）和 key 内容（兼容 getAll）
+            // 写入原始 key 长度（2字节）和 key 内容
             $keyLen = strlen($key);
-            fwrite($fp, pack('n', $keyLen)); // 2 字节长度
-            fwrite($fp, $key);
+            if (fwrite($fp, pack('n', $keyLen)) === false) {
+                return false;
+            }
+            if (fwrite($fp, $key) === false) {
+                return false;
+            }
 
             // 写入序列化后的数据
-            fwrite($fp, serialize($value));
+            if (fwrite($fp, serialize($value)) === false) {
+                return false;
+            }
+
+            // 所有写入成功
+            $success = true;
 
         } finally {
             flock($fp, LOCK_UN);
             fclose($fp);
+
+            if ($success) {
+                // 原子替换：写入成功后才覆盖原文件
+                rename($tmpFile, $file);
+            } else {
+                // 写入失败，删除临时文件
+                @unlink($tmpFile);
+            }
         }
 
-        return true;
+        return $success;
     }
     private function readFileWithKey(string $file, mixed $default = null): array
     {
@@ -145,44 +160,72 @@ class FileCacheDriver implements iCacheDriver
                 return [$file, $default];
             }
 
+            // 读取过期时间戳（10字节）
             $expire = (int)fread($fp, 10);
             if ($expire !== 0 && $expire < time()) {
                 $expired = true;
                 return [$file, $default];
             }
 
-            $peek = fread($fp, 2);
-            if (strlen($peek) < 2) {
-                // 旧格式（无原始键名）
-                $value = @unserialize(stream_get_contents($fp));
-                if ($value === false) {
-                    return [$file, $default];
-                }
-                return [$file, $value]; // 用路径作 key fallback
+            // 读取key长度（2字节）
+            $header = fread($fp, 2);
+            if (strlen($header) < 2) {
+                // 格式错误，删除文件
+                $expired = true;
+                return [$file, $default];
             }
 
-            $keyLen = unpack('n', $peek)[1];
+            $keyLen = unpack('n', $header)[1];
+            
+            // 防御异常keyLen（可能是损坏或旧格式文件）
+            if ($keyLen <= 0 || $keyLen > 1000) {
+                $expired = true;
+                return [$file, $default];
+            }
+            
+            // 读取原始key
             $origKey = fread($fp, $keyLen);
-
-            $value = @unserialize(stream_get_contents($fp));
-            if ($value === false) {
-                return [$origKey, $default];
+            if (strlen($origKey) !== $keyLen) {
+                // 读取失败，文件损坏
+                $expired = true;
+                return [$file, $default];
             }
+
+            // 读取并反序列化数据
+            $serialized = stream_get_contents($fp);
+
+            $value = unserialize($serialized);
 
             return [$origKey, $value];
 
-        }catch (ErrorException $exception) {
+        } catch (ErrorException $exception) {
             File::del($file, true);
             return [$file, $default];
         } finally {
-            if (is_resource($fp)) {          // 避免二次 flock/fclose
-                flock($fp, LOCK_UN);         // 释放锁
-                fclose($fp);                 // 关闭文件
+            if (is_resource($fp)) {
+                flock($fp, LOCK_UN);
+                fclose($fp);
             }
             if ($expired) {
                 File::del($file, true);
             }
         }
+    }
+    public function is_serialized($str): bool
+    {
+        if (!is_string($str)) {
+            return false;
+        }
+        $str = trim($str);
+
+        if ($str === 'N;') {
+            return true; // 特殊值 null
+        }
+        if (!preg_match('/^[aOsibd]:/', $str)) {
+            return false; // 必须是合法前缀
+        }
+        // 最后一个分号 / 花括号必须存在
+        return str_ends_with($str, ';') || str_ends_with($str, '}');
     }
 
     /**
@@ -256,7 +299,6 @@ class FileCacheDriver implements iCacheDriver
         return max(-1, $expire - time());       // 计算剩余时间
     }
 
-    /* ===================== 内部辅助 ===================== */
 
     /**
      * 概率触发垃圾回收
@@ -302,7 +344,7 @@ class FileCacheDriver implements iCacheDriver
                 if (!$fp) {
                     continue;
                 }
-            } catch (\ErrorException $exception) {
+            } catch (ErrorException $exception) {
                 continue;
             }
 
