@@ -168,7 +168,7 @@ class Request
      */
     public function getDomainNoPort(): string
     {
-        $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
+        $host = $this->removePort($_SERVER['SERVER_NAME']);
         if ($host === '') {
             return '';
         }
@@ -186,7 +186,7 @@ class Request
      */
     public function getDomain(): string
     {
-        return $_SERVER["HTTP_HOST"];
+        return $_SERVER["SERVER_NAME"];
     }
 
     /**
@@ -198,7 +198,7 @@ class Request
      */
     public function getNowAddress(): string
     {
-        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
+        return $this->getHttpScheme() . $_SERVER["SERVER_NAME"] . $_SERVER['REQUEST_URI'];
     }
 
     /**
@@ -244,7 +244,7 @@ class Request
      */
     public function getBasicAddress(): string
     {
-        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"];
+        return $this->getHttpScheme() . $_SERVER["SERVER_NAME"];
     }
 
     /**
@@ -304,11 +304,15 @@ class Request
     public function getClientIP(): string
     {
         $ip = $_SERVER["REMOTE_ADDR"];
-        // 移除可能存在的端口号
-        if (str_contains($ip, ':')) {
-            $ip = strstr($ip, ':', true);
+        return $this->removePort($ip);
+    }
+
+    private function removePort(string $host):string{
+
+        if (str_contains($host, ':')) {
+            $host = strstr($host, ':', true);
         }
-        return $ip;
+        return $host;
     }
 
     /**
