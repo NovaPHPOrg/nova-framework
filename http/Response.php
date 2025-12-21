@@ -134,7 +134,16 @@ class Response extends NovaApp
         Logger::debug("Response file: $filePath");
         if (file_exists($filePath)) {
             $this->data = $filePath;
-            $this->header['Content-Disposition'] = 'attachment; filename="' . $fileName . '"';
+            
+            // RFC 2231 编码：兼容特殊字符文件名
+            // 提供两种格式：旧浏览器用 ASCII fallback，新浏览器用 UTF-8 编码
+            $encodedFileName = rawurlencode($fileName);
+            $this->header['Content-Disposition'] = sprintf(
+                'attachment; filename="%s"; filename*=UTF-8\'\'%s',
+                preg_replace('/[^\x20-\x7E]/', '_', $fileName), // ASCII fallback
+                $encodedFileName
+            );
+            
             $this->header['Accept-Ranges'] = 'bytes';
             $this->header['Connection'] = 'Keep-Alive';
             $this->header['Content-Description'] = 'File Transfer';
@@ -468,6 +477,7 @@ class Response extends NovaApp
     /**
      * 发送文件下载响应
      * 支持断点续传功能
+     * 统一使用分块读取，避免大文件内存溢出
      */
     protected function sendFile(): void
     {
@@ -476,11 +486,17 @@ class Response extends NovaApp
             echo $this->data;
             return;
         }
+        
+        // 禁用输出缓冲，防止大文件占用内存
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
+        }
+        
         $fileSize = filesize($this->data);
-
         $range = $this->parseRange($fileSize);
 
         if ($range !== null) {
+            // 断点续传
             [$start, $end] = $range;
             $length = $end - $start + 1;
             $this->code = 206;
@@ -492,13 +508,14 @@ class Response extends NovaApp
             }
             $this->outputFile($start, $length);
         } else {
+            // 普通下载：统一用分块读取，消除特殊情况
             $this->code = 200;
             $this->header['Content-Length'] = $fileSize;
             $this->sendHeaders();
             if ($this->isHead()) {
                 return;
             }
-            readfile($this->data);
+            $this->outputFile(0, $fileSize);
         }
     }
 
@@ -531,19 +548,38 @@ class Response extends NovaApp
 
     /**
      * 输出文件内容
+     * 使用 1MB 缓冲区，提升大文件传输效率
      * @param int $start  开始位置
      * @param int $length 长度
      */
     protected function outputFile(int $start, int $length): void
     {
+        // 取消执行时间限制，支持大文件下载
+        set_time_limit(0);
+        
         $handle = fopen($this->data, 'rb');
+        if ($handle === false) {
+            return;
+        }
+        
         fseek($handle, $start);
         $bytesSent = 0;
+        $bufferSize = 1024 * 1024; // 1MB buffer
 
         while (!feof($handle) && $bytesSent < $length) {
-            $buffer = fread($handle, min(8192, $length - $bytesSent));
+            $chunkSize = min($bufferSize, $length - $bytesSent);
+            $buffer = fread($handle, $chunkSize);
+            if ($buffer === false) {
+                break;
+            }
+            
             echo $buffer;
             $bytesSent += strlen($buffer);
+            
+            // 立即发送到客户端
+            if (ob_get_level() > 0) {
+                @ob_flush();
+            }
             flush();
         }
 
