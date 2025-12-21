@@ -50,4 +50,5 @@ $context->init();
 App::getInstance()->start();
 
 // 清理上下文对象
+$context->destroy();
 $context = null;

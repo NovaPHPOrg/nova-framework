@@ -331,15 +331,6 @@ class Context
         return microtime(true) - $this->start_time;
     }
 
-    /**
-     * 析构函数
-     *
-     * 在对象销毁时执行清理工作
-     */
-    public function __destruct()
-    {
-        $this->destroy();
-    }
 
     /**
      * 销毁上下文
