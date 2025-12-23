@@ -205,7 +205,6 @@ class Route extends NovaApp
             $this->uri = '/';
         }
 
-
         EventManager::getInstance()->trigger("route.before", $this->uri);
 
         Logger::debug("Route dispatch: $method " . $this->uri);
@@ -248,7 +247,6 @@ class Route extends NovaApp
         if (count($parts) > 1) {
             $uri = $parts[0];
         }
-
 
         // 规范化路径
         $uri = '/' . ltrim($uri, '/');

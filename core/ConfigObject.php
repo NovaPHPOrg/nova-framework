@@ -22,7 +22,6 @@ abstract class ConfigObject
      */
     private string $node;
 
-
     /**
      * 构造函数
      *

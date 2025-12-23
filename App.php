@@ -13,7 +13,6 @@ declare(strict_types=1);
 namespace nova\framework;
 
 use Error;
-use RuntimeException;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\core\NovaApp;
@@ -24,6 +23,7 @@ use nova\framework\http\Response;
 use nova\framework\route\ControllerException;
 use nova\framework\route\Route;
 use nova\framework\route\RouteObject;
+use RuntimeException;
 use Throwable;
 
 class App extends NovaApp

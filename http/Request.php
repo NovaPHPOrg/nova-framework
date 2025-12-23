@@ -307,7 +307,8 @@ class Request
         return $this->removePort($ip);
     }
 
-    private function removePort(string $host):string{
+    private function removePort(string $host): string
+    {
 
         if (str_contains($host, ':')) {
             $host = strstr($host, ':', true);

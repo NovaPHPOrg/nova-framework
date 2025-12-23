@@ -10,7 +10,6 @@ declare(strict_types=1);
 
 namespace nova\framework\cache;
 
-use Exception;
 use ErrorException;
 use nova\framework\core\File;
 
@@ -176,13 +175,13 @@ class FileCacheDriver implements iCacheDriver
             }
 
             $keyLen = unpack('n', $header)[1];
-            
+
             // 防御异常keyLen（可能是损坏或旧格式文件）
             if ($keyLen <= 0 || $keyLen > 1000) {
                 $expired = true;
                 return [$file, $default];
             }
-            
+
             // 读取原始key
             $origKey = fread($fp, $keyLen);
             if (strlen($origKey) !== $keyLen) {
@@ -298,7 +297,6 @@ class FileCacheDriver implements iCacheDriver
         }
         return max(-1, $expire - time());       // 计算剩余时间
     }
-
 
     /**
      * 概率触发垃圾回收

@@ -331,7 +331,6 @@ class Context
         return microtime(true) - $this->start_time;
     }
 
-
     /**
      * 销毁上下文
      *

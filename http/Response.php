@@ -43,8 +43,7 @@ class Response extends NovaApp
     /** @var ResponseType 响应类型 */
     protected ResponseType $type;
 
-
-    public function code():int
+    public function code(): int
     {
         return $this->code;
     }
@@ -134,7 +133,7 @@ class Response extends NovaApp
         Logger::debug("Response file: $filePath");
         if (file_exists($filePath)) {
             $this->data = $filePath;
-            
+
             // RFC 2231 编码：兼容特殊字符文件名
             // 提供两种格式：旧浏览器用 ASCII fallback，新浏览器用 UTF-8 编码
             $encodedFileName = rawurlencode($fileName);
@@ -143,7 +142,7 @@ class Response extends NovaApp
                 preg_replace('/[^\x20-\x7E]/', '_', $fileName), // ASCII fallback
                 $encodedFileName
             );
-            
+
             $this->header['Accept-Ranges'] = 'bytes';
             $this->header['Connection'] = 'Keep-Alive';
             $this->header['Content-Description'] = 'File Transfer';
@@ -486,12 +485,12 @@ class Response extends NovaApp
             echo $this->data;
             return;
         }
-        
+
         // 禁用输出缓冲，防止大文件占用内存
         while (ob_get_level() > 0) {
             @ob_end_clean();
         }
-        
+
         $fileSize = filesize($this->data);
         $range = $this->parseRange($fileSize);
 
@@ -556,12 +555,12 @@ class Response extends NovaApp
     {
         // 取消执行时间限制，支持大文件下载
         set_time_limit(0);
-        
+
         $handle = fopen($this->data, 'rb');
         if ($handle === false) {
             return;
         }
-        
+
         fseek($handle, $start);
         $bytesSent = 0;
         $bufferSize = 1024 * 1024; // 1MB buffer
@@ -572,10 +571,10 @@ class Response extends NovaApp
             if ($buffer === false) {
                 break;
             }
-            
+
             echo $buffer;
             $bytesSent += strlen($buffer);
-            
+
             // 立即发送到客户端
             if (ob_get_level() > 0) {
                 @ob_flush();
@@ -589,7 +588,7 @@ class Response extends NovaApp
     /**
      * 发送静态文件响应
      * 支持缓存控制和条件请求
-     * 
+     *
      * 优化要点：
      * - 使用 filemtime+filesize 生成 ETag，避免 md5_file 的性能开销
      * - 用 pathinfo 替代正则匹配，提升性能
@@ -600,7 +599,7 @@ class Response extends NovaApp
         $addr = $this->data;
         $addr = $this->filterFilePath($addr);
         Logger::debug("Response file: $addr");
-        
+
         // 验证文件是否存在且可读
         if (!file_exists($addr) || !is_readable($addr)) {
             $this->code = 404;
@@ -610,15 +609,15 @@ class Response extends NovaApp
             echo "File not found.";
             return;
         }
-        
+
         // 获取文件信息
         $this->header["Content-Type"] = file_type($addr);
         $lastModifiedTime = filemtime($addr);
         $fileSize = filesize($addr);
-        
+
         // 优化：使用 filemtime + filesize 生成 ETag，避免 md5_file 的性能开销
         $etag = sprintf('"%x-%x"', $lastModifiedTime, $fileSize);
-        
+
         // 检查 If-Modified-Since 和 If-None-Match 头
         if (
             (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= $lastModifiedTime) ||
@@ -629,10 +628,10 @@ class Response extends NovaApp
             Logger::debug("File not modified: $addr");
             return;
         }
-        
+
         // 优化：使用 pathinfo 替代正则，性能更好
         $ext = strtolower(pathinfo($addr, PATHINFO_EXTENSION));
-        
+
         // 根据文件类型设置缓存策略
         switch ($ext) {
             case 'gif':
@@ -666,25 +665,25 @@ class Response extends NovaApp
                 // 其他文件：1天缓存
                 $this->cache(60 * 24);
         }
-        
+
         // 设置 Last-Modified 和 ETag 头
         $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";
         $this->header["ETag"] = $etag;
-        
+
         // 发送响应头
         $this->sendHeaders();
         if ($this->isHead()) {
             return;
         }
-        
+
         Logger::debug("Send static file: $addr");
-        
+
         // 触发事件并输出文件内容
         $output = EventManager::trigger("response.static.before", $addr, true);
         if ($output !== true) {
             readfile($addr);
         }
-        
+
         EventManager::trigger("response.static.after", $addr);
     }
 
