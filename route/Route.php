@@ -198,11 +198,13 @@ class Route extends NovaApp
      */
     public function dispatch(string $uri, string $method): RouteObject
     {
+
         $this->uri = $this->removeQueryStringVariables($uri);
 
         if (empty($this->uri)) {
             $this->uri = '/';
         }
+
 
         EventManager::getInstance()->trigger("route.before", $this->uri);
 
@@ -247,8 +249,9 @@ class Route extends NovaApp
             $uri = $parts[0];
         }
 
+
         // 规范化路径
-        $uri = '/' . trim($uri, '/');
+        $uri = '/' . ltrim($uri, '/');
 
         if (str_starts_with($uri, "/public")) {
             $uri = substr($uri, 7);
