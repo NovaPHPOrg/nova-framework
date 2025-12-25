@@ -168,7 +168,7 @@ class Request
      */
     public function getDomainNoPort(): string
     {
-        $host = $this->removePort($_SERVER['SERVER_NAME']);
+        $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
         if ($host === '') {
             return '';
         }
@@ -186,7 +186,7 @@ class Request
      */
     public function getDomain(): string
     {
-        return $_SERVER["SERVER_NAME"];
+        return $_SERVER["HTTP_HOST"];
     }
 
     /**
@@ -198,7 +198,7 @@ class Request
      */
     public function getNowAddress(): string
     {
-        return $this->getHttpScheme() . $_SERVER["SERVER_NAME"] . $_SERVER['REQUEST_URI'];
+        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
     }
 
     /**
@@ -244,7 +244,7 @@ class Request
      */
     public function getBasicAddress(): string
     {
-        return $this->getHttpScheme() . $_SERVER["SERVER_NAME"];
+        return $this->getHttpScheme() . $_SERVER["HTTP_HOST"];
     }
 
     /**
