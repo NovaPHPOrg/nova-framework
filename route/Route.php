@@ -108,7 +108,7 @@ class Route extends NovaApp
     private function add(string $uri, RouteObject $mapper, string $method = ""): void
     {
         // 规范化URI，确保以/开头
-        $uri = '/' . trim($uri, '/');
+        $uri = '/' . ltrim($uri, '/');
 
         if (!empty($method)) {
             $this->routeIndex[$method][$uri] = $mapper;
@@ -249,7 +249,7 @@ class Route extends NovaApp
         }
 
         // 规范化路径
-        $uri = '/' . trim($uri, '/');
+        $uri = '/' . ltrim($uri, '/');
 
         if (str_starts_with($uri, "/public")) {
             $uri = substr($uri, 7);
