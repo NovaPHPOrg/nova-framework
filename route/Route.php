@@ -249,7 +249,7 @@ class Route extends NovaApp
         }
 
         // 规范化路径
-        $uri = '/' . ltrim($uri, '/');
+        $uri = '/' . trim($uri, '/');
 
         if (str_starts_with($uri, "/public")) {
             $uri = substr($uri, 7);
