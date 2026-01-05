@@ -92,7 +92,8 @@ class FileCacheDriver implements iCacheDriver
         // 使用临时文件，避免直接覆盖导致数据损坏
         $tmpFile = $file . '.' . uniqid('tmp', true);
 
-        $fp = fopen($tmpFile, 'w');
+        // 二进制模式，避免在部分环境下出现换行转换等问题
+        $fp = fopen($tmpFile, 'wb');
 
         if (!$fp) {
             return false;
@@ -136,10 +137,40 @@ class FileCacheDriver implements iCacheDriver
 
             if ($success) {
                 // 原子替换：写入成功后才覆盖原文件
-                rename($tmpFile, $file);
+                // 高并发下可能被 clear()/deleteKeyStartWith() 删除临时文件或目录；
+                // 同时本框架会把 WARNING 转成 ErrorException，所以这里必须 try/catch。
+                $renamed = false;
+                try {
+                    $renamed = rename($tmpFile, $file);
+                } catch (ErrorException) {
+                    $renamed = false;
+                }
+
+                if (!$renamed) {
+                    // 目录可能被外部清理，重建后再试一次（不改变原有路径规则）
+                    File::mkDir(dirname($file));
+                    try {
+                        $renamed = rename($tmpFile, $file);
+                    } catch (ErrorException) {
+                        $renamed = false;
+                    }
+                }
+
+                if (!$renamed) {
+                    $success = false;
+                    try {
+                        unlink($tmpFile);
+                    } catch (ErrorException) {
+                        // ignore
+                    }
+                }
             } else {
                 // 写入失败，删除临时文件
-                @unlink($tmpFile);
+                try {
+                    unlink($tmpFile);
+                } catch (ErrorException) {
+                    // ignore
+                }
             }
         }
 
