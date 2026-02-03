@@ -60,8 +60,18 @@ function file_type(string $filename): string
         'php' => 'text/html',
         'css' => 'text/css',
         'js' => 'application/javascript',
+        'mjs' => 'application/javascript',  // ES module
+        'cjs' => 'application/javascript',  // CommonJS module
+        'ts' => 'application/javascript',   // TypeScript
+        'jsx' => 'application/javascript',  // React JSX
+        'tsx' => 'application/javascript',  // TypeScript JSX
         'json' => 'application/json',
+        'map' => 'application/json',        // Source map
         'xml' => 'application/xml',
+        'md' => 'text/markdown',
+        'markdown' => 'text/markdown',
+        'yaml' => 'text/yaml',
+        'yml' => 'text/yaml',
         'swf' => 'application/x-shockwave-flash',
         'flv' => 'video/x-flv',
         // 图片文件
@@ -77,14 +87,33 @@ function file_type(string $filename): string
         'svg' => 'image/svg+xml',
         'svgz' => 'image/svg+xml',
         'webp' => 'image/webp',
+        'avif' => 'image/avif',
+        'heic' => 'image/heic',
+        'heif' => 'image/heif',
         // 压缩文件
         'zip' => 'application/zip',
         'rar' => 'application/x-rar-compressed',
+        '7z' => 'application/x-7z-compressed',
+        'tar' => 'application/x-tar',
+        'gz' => 'application/gzip',
+        'bz2' => 'application/x-bzip2',
+        'xz' => 'application/x-xz',
         'exe' => 'application/x-msdownload',
         'msi' => 'application/x-msdownload',
         'cab' => 'application/vnd.ms-cab-compressed',
         // 音视频文件
         'mp3' => 'audio/mpeg',
+        'wav' => 'audio/wav',
+        'ogg' => 'audio/ogg',
+        'flac' => 'audio/flac',
+        'aac' => 'audio/aac',
+        'm4a' => 'audio/mp4',
+        'mp4' => 'video/mp4',
+        'webm' => 'video/webm',
+        'ogv' => 'video/ogg',
+        'avi' => 'video/x-msvideo',
+        'mkv' => 'video/x-matroska',
+        'm4v' => 'video/x-m4v',
         'qt' => 'video/quicktime',
         'mov' => 'video/quicktime',
         // Adobe文件
@@ -95,15 +124,26 @@ function file_type(string $filename): string
         'ps' => 'application/postscript',
         // MS Office文件
         'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'rtf' => 'application/rtf',
         'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'ppt' => 'application/vnd.ms-powerpoint',
+        'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         // OpenOffice文件
         'odt' => 'application/vnd.oasis.opendocument.text',
         'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
+        // 电子书文件
+        'epub' => 'application/epub+zip',
+        'mobi' => 'application/x-mobipocket-ebook',
+        'azw' => 'application/vnd.amazon.ebook',
+        'azw3' => 'application/vnd.amazon.ebook',
         // 字体文件
-        "woff2" => 'font/woff2',
-        "ttf" => 'font/ttf',
+        'woff' => 'font/woff',
+        'woff2' => 'font/woff2',
+        'ttf' => 'font/ttf',
+        'otf' => 'font/otf',
+        'eot' => 'application/vnd.ms-fontobject',
     );
     $extension = pathinfo($filename, PATHINFO_EXTENSION);
     $ext = strtolower($extension);
