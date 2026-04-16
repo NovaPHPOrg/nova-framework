@@ -177,11 +177,16 @@ class App extends NovaApp
                 Logger::debug("Response sent successfully");
             }
         } catch (Throwable|Error $e) {
+
+
+            if ($e instanceof AppExitException) {
+                $this->handleAppExit($e);
+                return;
+            }
             Logger::error("Response send error", [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-
             $this->printException($e);
         }
     }
