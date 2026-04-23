@@ -178,7 +178,6 @@ class App extends NovaApp
             }
         } catch (Throwable|Error $e) {
 
-
             if ($e instanceof AppExitException) {
                 $this->handleAppExit($e);
                 return;
