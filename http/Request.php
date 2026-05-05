@@ -303,16 +303,27 @@ class Request
      */
     public function getClientIP(): string
     {
-        $ip = $_SERVER["REMOTE_ADDR"];
+        $ip = $_SERVER["REMOTE_ADDR"] ?? '';
         return $this->removePort($ip);
     }
 
     private function removePort(string $host): string
     {
-
-        if (str_contains($host, ':')) {
-            $host = strstr($host, ':', true);
+        // 1. 处理带方括号的 IPv6 情况，例如 [2001:db8::1]:8080
+        if (str_starts_with($host, '[')) {
+            $endBracket = strpos($host, ']');
+            if ($endBracket !== false) {
+                return substr($host, 1, $endBracket - 1);
+            }
         }
+
+        // 2. 检查是否是普通的 IPv4 带端口情况，例如 127.0.0.1:8080
+        // 如果包含一个冒号，且不是合法的 IPv6，那么它大概率是 IPv4:Port
+        if (substr_count($host, ':') === 1) {
+            return strstr($host, ':', true);
+        }
+
+        // 3. 其他情况（纯 IPv4 或 纯 IPv6）直接返回
         return $host;
     }
 
