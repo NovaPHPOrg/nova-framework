@@ -1,14 +1,16 @@
 <?php
 
-namespace nova\framework\core;
+declare(strict_types=1);
 
-use nova\plugin\orm\object\Dao;
+namespace nova\framework\core;
 
 class Instance
 {
     public static function getInstance(...$args): static
     {
-        $cls = get_called_class();
-        return Context::instance()->getOrCreateInstance($cls,new $cls(...$args));
+        $instanceKey = static::class . md5(serialize($args));
+        return Context::instance()->getOrCreateInstance($instanceKey, function () use ($args) {
+            return new static(...$args);
+        });
     }
 }
