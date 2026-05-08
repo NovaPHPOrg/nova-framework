@@ -130,7 +130,9 @@ class Request
         $this->headers = [];
         foreach ($_SERVER as $key => $value) {
             if (str_starts_with($key, 'HTTP_')) {
-                $this->headers[ucfirst(strtolower(str_replace('_', '-', substr($key, 5))))] = $value;
+                // 修复后
+                $formattedKey = ucwords(strtolower(str_replace('_', '-', substr($key, 5))), '-');
+                $this->headers[$formattedKey] = $value;
             }
             if (isset($_SERVER['PHP_AUTH_DIGEST'])) {
                 $this->headers['AUTHORIZATION'] = $_SERVER['PHP_AUTH_DIGEST'];
