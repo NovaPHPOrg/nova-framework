@@ -142,7 +142,7 @@ class ErrorHandler
 
         // 记录错误日志
         error_clear_last();
-        Logger::emergency($exception->getMessage());
+        Logger::error($exception);
 
         // 格式化调用栈
         $traces = sizeof($trace) === 0 ? debug_backtrace() : $trace;

@@ -182,10 +182,7 @@ class App extends NovaApp
                 $this->handleAppExit($e);
                 return;
             }
-            Logger::error("Response send error", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            Logger::error($e);
             $this->printException($e);
         }
     }
@@ -283,10 +280,7 @@ class App extends NovaApp
      */
     private function handleGeneralException(Throwable|Error $exception): void
     {
-        Logger::error("App Runtime Exception", [
-            'message' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString()
-        ]);
+        Logger::error($exception);
 
         $response = $this->onApplicationError($_SERVER['REQUEST_URI']);
         EventManager::trigger("app.error");
