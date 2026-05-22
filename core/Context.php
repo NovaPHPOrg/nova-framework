@@ -16,6 +16,7 @@ use nova\framework\cache\Cache;
 use nova\framework\http\Request;
 use nova\framework\http\Response;
 use RuntimeException;
+use function nova\framework\uuid;
 
 /**
  * 框架核心上下文类
@@ -99,6 +100,8 @@ class Context
      */
     protected array $vars = [];
 
+    protected string $request_id;
+
     /**
      * 构造函数
      *
@@ -108,6 +111,7 @@ class Context
      */
     public function __construct(Loader $loader)
     {
+        $this->request_id = uuid();
         $this->start_time = microtime(true);
         // 初始化框架
         $this->initFramework();
@@ -121,6 +125,11 @@ class Context
         $this->initLoader($loader);
     }
 
+
+    public function requestId():string
+    {
+        return $this->request_id;
+    }
     /**
      * 初始化框架
      *

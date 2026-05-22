@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework\http;
 
+use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\route\RouteObject;
 
@@ -56,7 +57,7 @@ class Request
      */
     public function __construct()
     {
-        $this->id = uniqid("req_", true);
+        $this->id = Context::instance()->requestId();
     }
 
     /**
@@ -108,10 +109,10 @@ class Request
     /**
      * 获取指定请求头的值
      *
-     * @param  string     $headName 头部字段名称
+     * @param string $headName 头部字段名称
      * @return mixed|null 返回头部值，不存在时返回null
      */
-    public function getHeaderValue($headName): mixed
+    public function getHeaderValue(string $headName): mixed
     {
         if (empty($this->headers)) {
             $this->initHeaders();

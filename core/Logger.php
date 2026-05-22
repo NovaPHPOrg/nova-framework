@@ -37,7 +37,6 @@ class Logger extends Instance
 
     private bool $debug;
     private int $minLevel;
-    private string $logId;
     private string $buffer = '';
     private int $bufferBytes = 0;
     /** @var resource */
@@ -53,7 +52,6 @@ class Logger extends Instance
     {
         $this->debug = Context::instance()->isDebug();
         $this->minLevel = $this->debug ? self::LEVEL['DEBUG'] : self::LEVEL['WARNING'];
-        $this->logId = uuid();
         $this->logDir = LOG_PATH;
         $this->logFile = $this->logDir . DIRECTORY_SEPARATOR . self::resolveLogHost() . '-' . date('Y-m-d') . '.log';
 
@@ -226,7 +224,8 @@ class Logger extends Instance
         $uri = $_SERVER['REQUEST_URI'] ?? 'CLI';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'CLI';
         $ip = $_SERVER['REMOTE_ADDR'] ?? '-';
-        $this->appendLine("=== {$method} {$uri} | {$ip} | id:{$this->logId} ===");
+        $request_id = Context::instance()->requestId();
+        $this->appendLine("=== {$method} {$uri} | {$ip} | id:{$request_id} ===");
         $this->requestHeaderWritten = true;
     }
 
