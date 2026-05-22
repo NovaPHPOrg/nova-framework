@@ -47,10 +47,7 @@ class Logger extends Instance
     private bool $hasContent = false;
     private bool $requestHeaderWritten = false;
 
-    public static function getInstance(...$args): static
-    {
-        return new static(...$args);
-    }
+
 
     public function __construct()
     {
