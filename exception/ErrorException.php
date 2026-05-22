@@ -13,14 +13,10 @@ declare(strict_types=1);
 namespace nova\framework\exception;
 
 use Exception;
-use nova\framework\core\Logger;
 use Throwable;
 
 /**
- * 错误异常类
- *
- * 该类扩展了PHP标准异常类，并增加了自动日志记录功能。
- * 当抛出此异常时，错误信息会自动记录到日志系统中。
+ * 由 ErrorHandler 将 PHP 错误转换而来的异常，由 App 统一记录日志。
  */
 class ErrorException extends Exception
 {
@@ -34,6 +30,5 @@ class ErrorException extends Exception
     public function __construct(string $message = "", int $code = 0, Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
-        Logger::error($message);
     }
 }

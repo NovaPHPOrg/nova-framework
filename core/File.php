@@ -99,7 +99,7 @@ class File
             closedir($dir);
             return $success;
         } catch (\ErrorException $e) {
-            Logger::error("复制失败: " . $e->getMessage(), $e->getTrace());
+            Logger::error('复制目录失败: ' . $e->getMessage());
             return false;
         }
     }
@@ -120,7 +120,7 @@ class File
                 if (str_contains($e->getMessage(), 'File exists')) {
                     return true;
                 }
-                Logger::error("创建目录失败: " . $e->getMessage(), $e->getTrace());
+                Logger::error("创建目录失败: {$dir} — " . $e->getMessage());
                 return false;
             }
         }
@@ -152,7 +152,7 @@ class File
             }
             return false;
         } catch (\ErrorException $e) {
-            Logger::error("复制文件失败: " . $e->getMessage(), $e->getTrace());
+            Logger::error("复制文件失败: {$src} -> {$dest} — " . $e->getMessage());
             return false;
         }
     }
@@ -192,7 +192,7 @@ class File
                 throw new \Exception("写入文件失败");
             }
         } catch (\ErrorException $e) {
-            Logger::error("删除文件或目录失败: " . $e->getMessage(), $e->getTrace());
+            Logger::error("写入文件失败: {$file} — " . $e->getMessage());
             throw $e;
         }
     }
@@ -232,7 +232,7 @@ class File
             if (str_contains($e->getMessage(), 'No such file or directory')) {
                 return;
             }
-            Logger::error("删除文件或目录失败: " . $e->getMessage(), $e->getTrace());
+            Logger::error("删除失败: {$dir} — " . $e->getMessage());
         }
     }
 }

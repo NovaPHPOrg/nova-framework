@@ -130,7 +130,6 @@ class Response extends NovaApp
     public function withFile(string $filePath, string $fileName): void
     {
         $filePath = $this->filterFilePath($filePath);
-        Logger::debug("Response file: $filePath");
         if (file_exists($filePath)) {
             $this->data = $filePath;
 
@@ -323,7 +322,7 @@ class Response extends NovaApp
     {
         try {
             $send = Json::encode($this->data);
-        } catch (JsonEncodeException $e) {
+        } catch (JsonEncodeException) {
             $send = json_encode(["error" => "Server error"]);
             $this->code = 500;
         }
@@ -598,7 +597,6 @@ class Response extends NovaApp
     {
         $addr = $this->data;
         $addr = $this->filterFilePath($addr);
-        Logger::debug("Response file: $addr");
 
         // 验证文件是否存在且可读
         if (!file_exists($addr) || !is_readable($addr)) {
@@ -625,7 +623,6 @@ class Response extends NovaApp
         ) {
             $this->code = 304;
             $this->sendHeaders();
-            Logger::debug("File not modified: $addr");
             return;
         }
 
@@ -675,8 +672,6 @@ class Response extends NovaApp
         if ($this->isHead()) {
             return;
         }
-
-        Logger::debug("Send static file: $addr");
 
         // 触发事件并输出文件内容
         $output = EventManager::trigger("response.static.before", $addr, true);
@@ -780,7 +775,7 @@ class Response extends NovaApp
             }
 
         } catch (Exception $e) {
-            Logger::error("Preload error: " . $e->getMessage());
+            Logger::error($e);
         }
 
     }

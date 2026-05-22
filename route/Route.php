@@ -205,9 +205,13 @@ class Route extends NovaApp
             $this->uri = '/';
         }
 
-        EventManager::getInstance()->trigger("route.before", $this->uri);
+        Logger::debug(sprintf(
+            'Route dispatch: %s %s',
+            $method,
+            $this->uri,
+        ));
 
-        Logger::debug("Route dispatch: $method " . $this->uri);
+        EventManager::getInstance()->trigger("route.before", $this->uri);
 
         if (config('default_route') ?? false) {
             $this->routeIndex['ANY']["/{module}/{controller}/{action}"] = route("{module}", "{controller}", "{action}");
@@ -220,10 +224,21 @@ class Route extends NovaApp
         EventManager::getInstance()->trigger("route.after", $routeObj);
 
         if ($routeObj === null) {
+            Logger::debug(sprintf(
+                'Route miss: %s %s',
+                $method,
+                $this->uri,
+            ));
             throw new ControllerException("Route not found: " . $this->uri);
         }
 
-        Logger::debug("Route object: $this->uri ->  $routeObj");
+        Logger::debug(sprintf(
+            'Route matched: %s %s -> %s params=%d ',
+            $method,
+            $this->uri,
+            $routeObj,
+            count($routeObj->params),
+        ));
 
         return $routeObj;
     }
@@ -253,7 +268,10 @@ class Route extends NovaApp
 
         if (str_starts_with($uri, "/public")) {
             $uri = substr($uri, 7);
-            Logger::warning("Don't use /public in uri: $uri, it's unsafe. Please use nginx or apache to set root path.");
+            Logger::warning(sprintf(
+                "URI uses /public prefix (unsafe), normalized to %s",
+                $uri,
+            ));
         }
 
         if (str_starts_with($uri, "/index.php")) {
@@ -261,7 +279,6 @@ class Route extends NovaApp
         }
 
         $this->root = Context::instance()->request()->getBasicAddress() . str_replace($uri, "", $raw);
-        Logger::debug("Route removeQueryStringVariables: $uri");
 
         return $uri;
     }
@@ -296,7 +313,6 @@ class Route extends NovaApp
         if (isset($this->routeIndex[$method])) {
             foreach ($this->routeIndex[$method] as $uri => $route) {
                 $rule = $this->buildRegexRule($uri);
-                Logger::debug("Route key: $uri  rule: $rule  uri: " . $this->uri);
 
                 if (preg_match($rule, $this->uri, $matches)) {
                     $this->setMatchedParameters($matches);
@@ -310,7 +326,6 @@ class Route extends NovaApp
         if (isset($this->routeIndex['ANY'])) {
             foreach ($this->routeIndex['ANY'] as $uri => $route) {
                 $rule = $this->buildRegexRule($uri);
-                Logger::debug("Route key: $uri  rule: $rule  uri: " . $this->uri);
 
                 if (preg_match($rule, $this->uri, $matches)) {
                     $this->setMatchedParameters($matches);

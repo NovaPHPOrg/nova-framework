@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework\http;
 
+use nova\framework\core\Logger;
 use nova\framework\route\RouteObject;
 
 /**
@@ -76,6 +77,12 @@ class Request
     public function setRoute(RouteObject $route): void
     {
         $this->route = $route;
+        Logger::debug(sprintf(
+            'Request route: %s params=%d id=%s',
+            $route,
+            count($route->params),
+            $this->id
+        ));
     }
 
     /**

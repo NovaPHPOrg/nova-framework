@@ -13,7 +13,6 @@ declare(strict_types=1);
 namespace nova\framework\json;
 
 use Exception;
-use nova\framework\core\Logger;
 use Throwable;
 
 /**
@@ -34,6 +33,5 @@ class JsonDecodeException extends Exception
     public function __construct(string $message = "", $json = "", int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
-        Logger::warning("json decode error => $message", [$json]);
     }
 }

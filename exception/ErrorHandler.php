@@ -14,7 +14,6 @@ namespace nova\framework\exception;
 
 use ErrorException;
 use nova\framework\core\Context;
-use nova\framework\core\Logger;
 use nova\framework\http\Arguments;
 use nova\framework\http\Response;
 use nova\framework\route\RouteObject;
@@ -140,9 +139,7 @@ class ErrorHandler
             'args' => []
         ]);
 
-        // 记录错误日志
         error_clear_last();
-        Logger::error($exception);
 
         // 格式化调用栈
         $traces = sizeof($trace) === 0 ? debug_backtrace() : $trace;

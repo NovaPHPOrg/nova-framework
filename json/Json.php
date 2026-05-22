@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace nova\framework\json;
 
 use JsonException;
+use nova\framework\core\Logger;
 
 /**
  * JSON 数据处理工具类
@@ -33,6 +34,8 @@ class Json
         try {
             return json_decode(self::removeUtf8Bom($string), $isArray, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
+            Logger::error($e);
+            Logger::error($string);
             throw new JsonDecodeException($e->getMessage(), $string, $e->getCode(), $e);
         }
     }
@@ -63,7 +66,10 @@ class Json
 
         $result = json_encode($array, $options);
         if ($result === false) {
-            throw new JsonEncodeException(json_last_error_msg(), $array);
+            $msg = json_last_error_msg();
+            Logger::error('JSON encode failed: ' . $msg);
+            Logger::error(print_r($array, true));
+            throw new JsonEncodeException($msg, $array);
         }
         return $result;
     }

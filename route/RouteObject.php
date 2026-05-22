@@ -132,6 +132,12 @@ class RouteObject
         } catch (ReflectionException $e) {
             throw new ControllerException("Action not found: $controllerClazz::{$this->action}", $this);
         }
+
+        Logger::debug(sprintf(
+            'Controller check: %s::%s',
+            $controllerClazz,
+            $this->action,
+        ));
     }
 
     /**
@@ -155,13 +161,30 @@ class RouteObject
     {
         $controllerName = ucfirst($this->controller);
         $controllerClazz = "app\\controller\\{$this->module}\\{$controllerName}";
+
+        Logger::debug(sprintf(
+            'Controller run: %s::%s params=%d',
+            $controllerClazz,
+            $this->action,
+            count($this->params),
+        ));
+
         $controller = new $controllerClazz();
         $init = $controller->init();
-        Logger::debug("Route Method: $controllerClazz::{$this->action}");
         if ($init instanceof Response) {
+            Logger::debug(sprintf(
+                'Controller init response: %s',
+                $controllerClazz,
+            ));
             throw new AppExitException($init);
         }
         $response = $controller->{$this->action}(...$this->params);
+        Logger::debug(sprintf(
+            'Controller done: %s::%s code=%d',
+            $controllerClazz,
+            $this->action,
+            $response->code(),
+        ));
         throw new AppExitException($response);
     }
 

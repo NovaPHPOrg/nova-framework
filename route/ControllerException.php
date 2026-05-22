@@ -13,7 +13,6 @@ declare(strict_types=1);
 namespace nova\framework\route;
 
 use Exception;
-use nova\framework\core\Logger;
 
 /**
  * 控制器异常类
@@ -38,7 +37,6 @@ class ControllerException extends Exception
     public function __construct(string $message = "", RouteObject $route = null)
     {
         parent::__construct($message, 0, null);
-        Logger::error($message);
         $this->route = $route;
     }
 

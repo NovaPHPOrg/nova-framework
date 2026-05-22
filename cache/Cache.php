@@ -34,17 +34,21 @@ class Cache
      */
     public function __construct(bool $shared = false, ?string $driverClazz = null)
     {
-        $driver = $driverClazz ?? config('cache_driver');
+        $driver = $driverClazz ?? config('cache_driver') ?? FileCacheDriver::class;
 
         try {
-            if ($driver == null || !class_exists($driver) || !in_array('nova\framework\cache\iCacheDriver', class_implements($driver))) {
+            if ($driver == null || !class_exists($driver) || !in_array(iCacheDriver::class, class_implements($driver))) {
                 throw new CacheException("Cache driver {$driver} not found");
             }
             $this->driver = new $driver($shared);
+            Logger::debug("Cache drive: $driver");
         } catch (CacheException $e) {
             // 当指定的缓存驱动无效时，默认使用文件缓存驱动
             $this->driver = new FileCacheDriver($shared);
-            Logger::warning($e->getMessage());
+            Logger::warning('Cache driver fallback to FileCacheDriver', [
+                'driver' => $driver,
+                'reason' => $e->getMessage(),
+            ]);
         }
     }
 

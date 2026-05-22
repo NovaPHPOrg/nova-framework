@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework\route;
 
+use nova\framework\core\Logger;
 use nova\framework\core\NovaApp;
 use nova\framework\http\Request;
 use nova\framework\http\Response;
@@ -39,6 +40,10 @@ class Controller extends NovaApp
     {
         parent::__construct();
         $this->request = $this->context->request();
+        Logger::debug(sprintf(
+            'Controller construct: %s',
+            static::class
+        ));
     }
 
     /**

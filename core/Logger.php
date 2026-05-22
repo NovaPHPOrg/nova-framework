@@ -47,6 +47,11 @@ class Logger extends Instance
     private bool $hasContent = false;
     private bool $requestHeaderWritten = false;
 
+    public static function getInstance(...$args): static
+    {
+        return new static(...$args);
+    }
+
     public function __construct()
     {
         $this->debug = Context::instance()->isDebug();
@@ -88,6 +93,38 @@ class Logger extends Instance
     public static function debug(mixed $message, array $context = []): void
     {
         static::getInstance()->write($message, 'DEBUG', $context);
+    }
+
+    /**
+     * 跳过指定框架文件，返回上级调用方（相对路径:行号 类::方法()）
+     *
+     * @param string ...$skipFileSuffixes 要跳过的文件名后缀，如 'Route.php'
+     */
+    public static function caller(string ...$skipFileSuffixes): string
+    {
+        $skip = ['Logger.php', ...$skipFileSuffixes];
+
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
+            $file = $frame['file'] ?? null;
+            if ($file === null) {
+                continue;
+            }
+
+            foreach ($skip as $suffix) {
+                if (str_ends_with($file, $suffix)) {
+                    continue 2;
+                }
+            }
+
+            $path = defined('ROOT_PATH')
+                ? ltrim(str_replace('\\', '/', str_replace(ROOT_PATH, '', $file)), '/')
+                : basename($file);
+            $line = $frame['line'] ?? 0;
+
+            return "{$path}:{$line}";
+        }
+
+        return 'unknown';
     }
 
     private function write(mixed $message, string $level, array $context = []): void

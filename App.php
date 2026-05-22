@@ -75,7 +75,7 @@ class App extends NovaApp
      */
     private function initializeFramework(): void
     {
-        Logger::debug("App Start");
+        Logger::debug('App init');
         ErrorHandler::register();
         EventManager::register();
         $this->onFrameworkStart();
@@ -95,6 +95,11 @@ class App extends NovaApp
      */
     private function handleRouting(): RouteObject
     {
+        Logger::debug(sprintf(
+            'App routing: %s %s',
+            $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+            $_SERVER['REQUEST_URI'] ?? '/',
+        ));
         $route = Route::getInstance()->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
         $this->onRoute($route);
         EventManager::trigger("route.handler", $route);
@@ -137,6 +142,7 @@ class App extends NovaApp
      */
     private function processRequest(RouteObject $route): void
     {
+        Logger::debug(sprintf('App handle: %s', $route));
         $request = $this->context->request();
         $request->setRoute($route);
         $this->onAppStart();
@@ -156,8 +162,12 @@ class App extends NovaApp
      */
     private function handleAppExit(AppExitException $exception): void
     {
-        Logger::debug("App Exit Exception", ['message' => $exception->getMessage()]);
-        $this->sendResponse($exception->response());
+        $response = $exception->response();
+        Logger::debug(sprintf(
+            'App exit: code=%d',
+            $response?->code() ?? 0,
+        ));
+        $this->sendResponse($response);
         $this->onAppEnd();
         EventManager::trigger("app.end", $this);
     }
@@ -174,7 +184,10 @@ class App extends NovaApp
             if ($response) {
                 EventManager::trigger("app.send", $response);
                 $response->send();
-                Logger::debug("Response sent successfully");
+                Logger::debug(sprintf(
+                    'App response sent: code=%d',
+                    $response->code(),
+                ));
             }
         } catch (Throwable|Error $e) {
 
@@ -222,7 +235,10 @@ class App extends NovaApp
      */
     private function handleControllerException(ControllerException $exception): void
     {
-        Logger::debug("Controller Exception", ['message' => $exception->getMessage()]);
+        Logger::warning(sprintf(
+            'App route error: %s',
+            $exception->getMessage(),
+        ));
         $route = $exception->route();
         $response = $this->onRouteNotFound($route, $_SERVER['REQUEST_URI']);
         EventManager::trigger("route.not.found", $route);
@@ -280,7 +296,9 @@ class App extends NovaApp
      */
     private function handleGeneralException(Throwable|Error $exception): void
     {
-        Logger::error($exception);
+        Logger::error($exception, [
+            'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        ]);
 
         $response = $this->onApplicationError($_SERVER['REQUEST_URI']);
         EventManager::trigger("app.error");
@@ -315,16 +333,20 @@ class App extends NovaApp
         $this->onFrameworkEnd();
         EventManager::trigger("framework.end", $this);
 
-        $executionTime = runtime("App Session");
+        $executionTime = $this->context->calcAppTime() * 1000;
+        $runtimeMs = round($executionTime, 2);
+        Logger::debug(sprintf(
+            'App end: %.2fms',
+            $runtimeMs,
+        ));
         if ($executionTime > self::PERFORMANCE_THRESHOLD) {
-            Logger::warning("Performance warning", [
-                'runtime' => $executionTime,
-                'threshold' => self::PERFORMANCE_THRESHOLD,
-                'message' => "App execution exceeded recommended time"
-            ]);
+            Logger::warning(sprintf(
+                'App slow: %.2fms (threshold %dms) %s',
+                $runtimeMs,
+                self::PERFORMANCE_THRESHOLD,
+                $_SERVER['REQUEST_URI'] ?? '',
+            ));
         }
-
-        Logger::debug("App end");
         // Response::finish();
     }
 

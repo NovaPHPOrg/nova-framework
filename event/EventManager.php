@@ -14,10 +14,12 @@ namespace nova\framework\event;
 
 use function nova\framework\config;
 
+use Closure;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionFunction;
 
 /**
  * 事件管理器类
@@ -53,7 +55,7 @@ class EventManager
     {
         $events = config("framework_start");
         if (!is_array($events)) {
-            Logger::debug("Framework start events configuration is not an array");
+            Logger::warning('framework_start config is not an array');
             return;
         }
 
@@ -64,8 +66,9 @@ class EventManager
                     throw new ReflectionException("Method 'register' not found in {$event}");
                 }
                 $ref->getMethod('register')->invoke(null);
+
             } catch (ReflectionException $e) {
-                Logger::error("Event: {$event} register failed: " . $e->getMessage());
+                Logger::error($e, ['event' => $event]);
             }
         }
     }
@@ -96,6 +99,13 @@ class EventManager
 
         $this->events[$event_name][$level] = $func;
         ksort($this->events[$event_name]);
+
+        Logger::debug(sprintf(
+            'Event listen: %s priority=%d ← %s',
+            $event_name,
+            $level,
+            Logger::caller('EventManager.php')
+        ));
     }
 
     public static function getInstance(): EventManager
@@ -124,15 +134,22 @@ class EventManager
     public function _trigger(string $event_name, mixed &$data = null, bool $once = false): mixed
     {
         if (!array_key_exists($event_name, $this->events)) {
+            Logger::debug(sprintf('Event trigger: %s (no listeners) ← %s', $event_name, Logger::caller('EventManager.php')));
             return null;
         }
 
         $list = $this->events[$event_name];
         $results = [];
 
+        Logger::debug(sprintf(
+            'Event trigger: %s listeners=%d once=%s ← %s',
+            $event_name,
+            count($list),
+            $once ? 'yes' : 'no',
+            Logger::caller('EventManager.php')
+        ));
+
         foreach ($list as $key => $event) {
-            // 记录事件触发的日志，包含优先级信息
-            Logger::debug("Event: $event_name, level: $key");
             $results[$key] = $event($event_name, $data);
 
             // 当返回 false 或在 $once 模式下获得非空返回值时终止处理
@@ -184,4 +201,5 @@ class EventManager
     {
         return isset($this->events[$event_name]) ? count($this->events[$event_name]) : 0;
     }
+
 }
