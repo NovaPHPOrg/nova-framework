@@ -15,8 +15,8 @@ namespace nova\framework\core;
 use nova\framework\cache\Cache;
 use nova\framework\http\Request;
 use nova\framework\http\Response;
+
 use RuntimeException;
-use function nova\framework\uuid;
 
 /**
  * 框架核心上下文类
@@ -111,7 +111,7 @@ class Context
      */
     public function __construct(Loader $loader)
     {
-        $this->request_id = uuid();
+        $this->request_id = uniqid("request_");
         $this->start_time = microtime(true);
         // 初始化框架
         $this->initFramework();
@@ -125,8 +125,7 @@ class Context
         $this->initLoader($loader);
     }
 
-
-    public function requestId():string
+    public function requestId(): string
     {
         return $this->request_id;
     }
@@ -212,7 +211,7 @@ class Context
      */
     public function initRequest(): void
     {
-        $this->request = new Request();
+        $this->request = new Request($this->request_id);
         $this->session_id = $this->request->id();
     }
 

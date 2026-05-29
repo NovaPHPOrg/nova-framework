@@ -12,7 +12,6 @@ declare(strict_types=1);
 
 namespace nova\framework\http;
 
-use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\route\RouteObject;
 
@@ -53,11 +52,11 @@ class Request
     /**
      * 构造函数
      *
-     * 初始化请求ID，为每个请求生成唯一标识符
+     * @param string $id 请求唯一标识符，由 Context 在初始化时传入
      */
-    public function __construct()
+    public function __construct(string $id)
     {
-        $this->id = Context::instance()->requestId();
+        $this->id = $id;
     }
 
     /**
@@ -109,7 +108,7 @@ class Request
     /**
      * 获取指定请求头的值
      *
-     * @param string $headName 头部字段名称
+     * @param  string     $headName 头部字段名称
      * @return mixed|null 返回头部值，不存在时返回null
      */
     public function getHeaderValue(string $headName): mixed

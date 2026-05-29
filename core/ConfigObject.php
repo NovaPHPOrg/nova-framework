@@ -52,7 +52,6 @@ abstract class ConfigObject
         return $cfg;
     }
 
-
     public function __toString(): string
     {
         return md5(json_encode($this->getConfig()));

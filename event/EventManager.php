@@ -14,12 +14,10 @@ namespace nova\framework\event;
 
 use function nova\framework\config;
 
-use Closure;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use ReflectionClass;
 use ReflectionException;
-use ReflectionFunction;
 
 /**
  * 事件管理器类

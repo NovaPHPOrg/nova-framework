@@ -15,8 +15,6 @@ namespace nova\framework\core;
 use RuntimeException;
 use Throwable;
 
-use function nova\framework\uuid;
-
 /**
  * 请求级日志：内存缓冲 → 超阈值刷入 tmpfile → 析构时合并追加到 {host}-{day}.log。
  * 级别：Debug / Info / Warning / Error（生产环境仅 Warning、Error）
@@ -45,8 +43,6 @@ class Logger extends Instance
     private string $logDir;
     private bool $hasContent = false;
     private bool $requestHeaderWritten = false;
-
-
 
     public function __construct()
     {
