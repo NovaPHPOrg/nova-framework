@@ -55,7 +55,7 @@ class Logger extends Instance
             throw new RuntimeException("Failed to create log directory: {$this->logDir}");
         }
 
-        $temp = tmpfile();
+        $temp = $this->createTempLogFile();
         if ($temp === false) {
             throw new RuntimeException('Failed to create temporary log file');
         }
@@ -64,6 +64,20 @@ class Logger extends Instance
         if (mt_rand(1, 100) === 1) {
             $this->cleanupOldLogs();
         }
+    }
+
+
+    private function createTempLogFile()
+    {
+        if($this->debug){
+            $dir = TEMP_PATH . DS ;
+            File::mkDir($dir);
+            $file = $dir . uniqid("log_").".log";
+            return fopen($file,"a+");
+        }
+
+        return tmpfile();
+
     }
 
     public static function error(mixed $message, array $context = []): void
@@ -298,6 +312,15 @@ class Logger extends Instance
         foreach (glob($this->logDir . DIRECTORY_SEPARATOR . '*.log') ?: [] as $file) {
             if (is_file($file) && filemtime($file) < $threshold) {
                 @unlink($file);
+            }
+        }
+
+        if($this->debug){
+            $threshold = time() - 300;
+            foreach (glob(TEMP_PATH . DS . '*.log') ?: [] as $file) {
+                if (is_file($file) && filemtime($file) < $threshold) {
+                    @unlink($file);
+                }
             }
         }
     }
