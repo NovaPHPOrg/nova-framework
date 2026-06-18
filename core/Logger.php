@@ -66,14 +66,13 @@ class Logger extends Instance
         }
     }
 
-
     private function createTempLogFile()
     {
-        if($this->debug){
+        if ($this->debug) {
             $dir = TEMP_PATH . DS ;
             File::mkDir($dir);
             $file = $dir . uniqid("log_").".log";
-            return fopen($file,"a+");
+            return fopen($file, "a+");
         }
 
         return tmpfile();
@@ -315,7 +314,7 @@ class Logger extends Instance
             }
         }
 
-        if($this->debug){
+        if ($this->debug) {
             $threshold = time() - 300;
             foreach (glob(TEMP_PATH . DS . '*.log') ?: [] as $file) {
                 if (is_file($file) && filemtime($file) < $threshold) {

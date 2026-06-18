@@ -17,7 +17,7 @@ use RuntimeException;
  * @author Nova Framework
  * @since 1.0.0
  */
-abstract class StaticRegister
+class StaticRegister extends Instance
 {
     /**
      * 执行静态注册

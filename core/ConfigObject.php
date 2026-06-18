@@ -15,7 +15,7 @@ use RuntimeException;
  * @package nova\framework\core
  * @author Nova Framework
  */
-abstract class ConfigObject
+class ConfigObject extends Instance
 {
     /**
      * @var string
