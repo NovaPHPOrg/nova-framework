@@ -14,9 +14,7 @@ namespace nova\framework\exception;
 
 use ErrorException;
 use nova\framework\core\Context;
-use nova\framework\http\Arguments;
 use nova\framework\http\Response;
-use nova\framework\route\RouteObject;
 use Throwable;
 
 /**
@@ -120,8 +118,6 @@ class ErrorHandler
      * - 错误类型和消息
      * - 文件位置和行号
      * - 调用栈信息
-     * - 请求信息
-     * - 服务器环境信息
      *
      * @param  Throwable $exception 需要处理的异常
      * @return string    格式化的HTML错误页面
@@ -168,9 +164,8 @@ class ErrorHandler
             $exception->getMessage()
         ], $tpl);
 
-        // 生成错误文件列表和代码容器
+        // 生成错误文件列表和代码容器 (使用 details/summary 结构)
         $TEMPLATE_LIST = "";
-        $TEMPLATE_CONTAINER = "";
         $first = true;
 
         foreach ($traces as $key => $trace) {
@@ -187,34 +182,27 @@ class ErrorHandler
                 continue;
             }
 
-            // 生成文件列表项
-            $TEMPLATE_LIST .= $first
-                ? "<li class=\"active\" data-file-key=\"{$key}\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>"
-                : "<li data-file-key=\"{$key}\" onclick=\"showCode('{$key}')\"><b>{$trace['file']}</b><span class=\"number\">#{$trace['line']}</span></li>";
-            $first = false;
-
-            // 生成代码容器
-            $TEMPLATE_CONTAINER .= "<div id=\"header{$key}\">";
-            $TEMPLATE_CONTAINER .= "<div class=\"param-group\"><div class=\"param-item\">";
+            // 构建 summary 内容：类名、类型、函数名、参数
+            $summaryHtml = '';
 
             // 添加类名、类型和函数信息
             $clazz = $trace["class"] ?? "";
             $type = $trace["type"] ?? "";
-            $function = $trace['function'] ?? "";
+            $function = $trace['function'] ?? '';
 
             if (!empty($clazz)) {
-                $TEMPLATE_CONTAINER .= "<span class=\"highlight-class\">{$clazz}</span>";
+                $summaryHtml .= "<span class=\"trace-class\">{$clazz}</span>";
             }
             if (!empty($type)) {
-                $TEMPLATE_CONTAINER .= "<span class=\"highlight-type\">{$type}</span>";
+                $summaryHtml .= "<span class=\"trace-type\">{$type}</span>";
             }
             if (!empty($function)) {
-                $TEMPLATE_CONTAINER .= "<span class=\"highlight-function\">{$function}(";
+                $summaryHtml .= "<span class=\"trace-function\">{$function}(";
 
                 // 添加函数参数
                 if (!empty($trace['args'])) {
                     foreach ($trace['args'] as $i => $arg) {
-                        $color = ($i % 2 == 0) ? "highlight-args1" : "highlight-args2";
+                        $color = ($i % 2 == 0) ? "trace-args1" : "trace-args2";
                         $argStr = htmlspecialchars(print_r($arg, true), ENT_QUOTES);
                         // 限制参数显示长度为最多200个UTF-8字符
                         if (\mb_strlen($argStr, 'UTF-8') > 200) {
@@ -222,29 +210,40 @@ class ErrorHandler
                         }
 
                         $argStr = str_replace("\n", "<br>", $argStr);
-                        $TEMPLATE_CONTAINER .= "<span class=\"highlight-args {$color}\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
+                        $summaryHtml .= "<span class=\"trace-args {$color}\">&nbsp;&nbsp;{$argStr}&nbsp;,</span>";
                     }
                 }
 
-                $TEMPLATE_CONTAINER .= ")</span>";
+                $summaryHtml .= ")</span>";
             }
 
-            $TEMPLATE_CONTAINER .= "</div></div></div>";
+            // 生成 details 元素
+            // 第一个 trace 默认展开，其他折叠
+            if ($first) {
+                $TEMPLATE_LIST .= "<details class=\"trace-entry\" open>";
+                $first = false;
+            } else {
+                $TEMPLATE_LIST .= "<details class=\"trace-entry\">";
+            }
+            $TEMPLATE_LIST .= "<summary class=\"trace-summary\">";
+            $TEMPLATE_LIST .= "<span class=\"trace-arrow\">▶</span>";
+            $TEMPLATE_LIST .= "<span class=\"trace-file\">{$trace['file']}</span>";
+            $TEMPLATE_LIST .= "<span class=\"trace-line\">#{$trace['line']}</span>";
+            $TEMPLATE_LIST .= "<span class=\"trace-args\">{$summaryHtml}</span>";
+            $TEMPLATE_LIST .= "</summary>";
+            $TEMPLATE_LIST .= "<div class=\"trace-code\">";
 
-            // 添加代码内容
-            $TEMPLATE_CONTAINER .= "<div id=\"file{$key}\">";
+            // 添加代码内容，标记当前行
             foreach ($sourceLine as $line) {
-                $TEMPLATE_CONTAINER .= "<div class=\"code-line\">" . $line . "</div>";
+                $TEMPLATE_LIST .= "<div class=\"code-line\">{$line}</div>";
             }
-            $TEMPLATE_CONTAINER .= "</div>";
+
+            $TEMPLATE_LIST .= "</div>";
+            $TEMPLATE_LIST .= "</details>";
         }
 
         // 替换模板变量
         $tpl = str_replace("{TEMPLATE_LIST}", $TEMPLATE_LIST, $tpl);
-        $tpl = str_replace("{TEMPLATE_CONTENTS}", $TEMPLATE_CONTAINER, $tpl);
-
-        // 添加请求信息
-        $tpl = self::addRequestInfo($tpl);
 
         return $tpl;
     }
@@ -291,12 +290,13 @@ class ErrorHandler
 
         // 生成代码行HTML
         for ($i = $start; $i <= $end; $i++) {
-            $number = '<span class="ln-num" data-num="' . $i . '"></span>';
+            $number = '<span class="line-num">' . $i . '</span>';
+            $codeContent = self::highlightCode($data[$i - 1]);
 
             if ($i == $line) {
-                $returns[] = "<span id='current'>" . $number . self::highlightCode($data[$i - 1]) . "</span>";
+                $returns[] = '<div class="code-line current"><span class="line-num">' . $i . '</span><span class="code-content">' . $codeContent . '</span></div>';
             } else {
-                $returns[] = $number . self::highlightCode($data[$i - 1]);
+                $returns[] = '<div class="code-line"><span class="line-num">' . $i . '</span><span class="code-content">' . $codeContent . '</span></div>';
             }
         }
 
@@ -329,65 +329,5 @@ class ErrorHandler
 
         // 还原注释标记
         return str_replace(['//*/', '///**', '//*'], ['*/', '/**', '*'], $return);
-    }
-
-    /**
-     * 添加请求相关信息到错误模板
-     *
-     * @param  string $tpl 错误模板
-     * @return string 更新后的模板
-     */
-    private static function addRequestInfo(string $tpl): string
-    {
-        $request = Context::instance()->request();
-
-        // 基本请求信息
-        $requestInfo = $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI'] . "<br>";
-
-        // 请求头信息
-        $headers = $request->getHeaders();
-        $REQUEST_HEADERS = "";
-        foreach ($headers as $key => $value) {
-            if (empty($value)) {
-                continue;
-            }
-            $requestInfo .= "$key: $value<br>";
-            $REQUEST_HEADERS .= "<tr><td class=\"key\">$key</td><td class=\"value\">$value</td></tr>";
-        }
-
-        // 请求体
-        $raw = Arguments::raw();
-        $requestInfo .= "<br>" . (empty($raw) ? "(empty)" : $raw);
-
-        $route = $request->getRoute() ?? new RouteObject();
-        // 路由信息
-        $REQUEST_ROUTING = "<tr><td class=\"key\">Module</td><td class=\"value\">{$route->module}</td></tr>"
-            . "<tr><td class=\"key\">Controller</td><td class=\"value\">{$route->controller}</td></tr>"
-            . "<tr><td class=\"key\">Action</td><td class=\"value\">{$route->action}</td></tr>";
-
-        // 服务器信息
-        $REQUEST_SERVER = "";
-        foreach ($_SERVER as $key => $value) {
-            $REQUEST_SERVER .= "<tr><td class=\"key\">$key</td><td class=\"value\">$value</td></tr>";
-        }
-
-        // 替换模板变量
-        return str_replace([
-            "{REQUEST_INFO}",
-            "{REQUEST_URI}",
-            "{REQUEST_METHOD}",
-            "{REQUEST_HEADERS}",
-            "{REQUEST_BODY}",
-            "{REQUEST_ROUTING}",
-            "{REQUEST_SERVER}"
-        ], [
-            $requestInfo,
-            $request->getNowAddress(),
-            $_SERVER['REQUEST_METHOD'],
-            $REQUEST_HEADERS,
-            $raw,
-            $REQUEST_ROUTING,
-            $REQUEST_SERVER
-        ], $tpl);
     }
 }
