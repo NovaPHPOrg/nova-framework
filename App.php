@@ -20,9 +20,9 @@ use nova\framework\event\EventManager;
 use nova\framework\exception\AppExitException;
 use nova\framework\exception\ErrorHandler;
 use nova\framework\http\Response;
+use nova\framework\route\AbstractRouteObject;
 use nova\framework\route\ControllerException;
 use nova\framework\route\Route;
-use nova\framework\route\RouteObject;
 use RuntimeException;
 use Throwable;
 
@@ -93,7 +93,7 @@ class App extends NovaApp
      * 处理路由
      * @throws ControllerException
      */
-    private function handleRouting(): RouteObject
+    private function handleRouting(): AbstractRouteObject
     {
         Logger::debug(sprintf(
             'App routing: %s %s',
@@ -127,9 +127,9 @@ class App extends NovaApp
 
     /**
      * 路由解析完成时的钩子方法
-     * @param RouteObject|null $route 路由对象
+     * @param AbstractRouteObject|null $route 路由对象
      */
-    protected function onRoute(?RouteObject $route)
+    protected function onRoute(?AbstractRouteObject $route)
     {
     }
 
@@ -137,10 +137,10 @@ class App extends NovaApp
      * 处理请求
      * 设置路由信息到请求对象中，触发应用启动事件，并执行路由
      *
-     * @param  RouteObject      $route 路由对象
+     * @param  AbstractRouteObject $route 路由对象
      * @throws AppExitException
      */
-    private function processRequest(RouteObject $route): void
+    private function processRequest(AbstractRouteObject $route): void
     {
         Logger::debug(sprintf('App handle: %s', $route));
         $request = $this->context->request();
@@ -252,11 +252,11 @@ class App extends NovaApp
 
     /**
      * 路由未找到时的钩子方法
-     * @param  RouteObject|null $route 路由对象
-     * @param  string           $uri   请求URI
-     * @return Response|null    自定义的错误响应
+     * @param  AbstractRouteObject|null $route 路由对象
+     * @param  string                   $uri   请求URI
+     * @return Response|null            自定义的错误响应
      */
-    protected function onRouteNotFound(?RouteObject $route, string $uri): ?Response
+    protected function onRouteNotFound(?AbstractRouteObject $route, string $uri): ?Response
     {
         return null;
     }

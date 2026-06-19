@@ -24,17 +24,17 @@ class ControllerException extends Exception
     /**
      * 与异常相关的路由对象
      *
-     * @var RouteObject|null
+     * @var AbstractRouteObject|null
      */
-    private ?RouteObject $route;
+    private ?AbstractRouteObject $route;
 
     /**
      * 构造函数
      *
-     * @param string           $message 异常信息
-     * @param RouteObject|null $route   相关的路由对象
+     * @param string                   $message 异常信息
+     * @param AbstractRouteObject|null $route   相关的路由对象
      */
-    public function __construct(string $message = "", RouteObject $route = null)
+    public function __construct(string $message = "", AbstractRouteObject $route = null)
     {
         parent::__construct($message, 0, null);
         $this->route = $route;
@@ -43,9 +43,9 @@ class ControllerException extends Exception
     /**
      * 获取与异常相关的路由对象
      *
-     * @return RouteObject|null 返回路由对象，如果不存在则返回null
+     * @return AbstractRouteObject|null 返回路由对象，如果不存在则返回null
      */
-    public function route(): ?RouteObject
+    public function route(): ?AbstractRouteObject
     {
         return $this->route;
     }

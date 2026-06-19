@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace nova\framework\http;
 
 use nova\framework\core\Logger;
-use nova\framework\route\RouteObject;
+use nova\framework\route\AbstractRouteObject;
 
 /**
  * HTTP请求处理类
@@ -41,7 +41,7 @@ class Request
      * 路由对象
      * 存储当前请求匹配的路由信息
      */
-    private ?RouteObject $route = null;
+    private ?AbstractRouteObject $route = null;
 
     /**
      * 请求头数组
@@ -62,9 +62,9 @@ class Request
     /**
      * 获取路由对象
      *
-     * @return RouteObject|null 返回当前请求的路由对象
+     * @return AbstractRouteObject|null 返回当前请求的路由对象
      */
-    public function getRoute(): ?RouteObject
+    public function getRoute(): ?AbstractRouteObject
     {
         return $this->route;
     }
@@ -72,9 +72,9 @@ class Request
     /**
      * 设置路由对象
      *
-     * @param RouteObject $route 路由对象
+     * @param AbstractRouteObject $route 路由对象
      */
-    public function setRoute(RouteObject $route): void
+    public function setRoute(AbstractRouteObject $route): void
     {
         $this->route = $route;
         Logger::debug(sprintf(
