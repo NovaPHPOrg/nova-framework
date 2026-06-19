@@ -23,6 +23,6 @@ class RouteObject extends AbstractRouteObject
      */
     protected function getControllerClass(): string
     {
-        return "app\\controller\\{$this->module}\\{$this->controller}";
+        return "app\\controller\\{$this->module}\\" . ucfirst($this->controller);
     }
 }
