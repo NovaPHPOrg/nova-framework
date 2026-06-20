@@ -105,6 +105,17 @@ class Request
         return $_SERVER['REQUEST_URI'];
     }
 
+    public function getPath(): string
+    {
+
+        $uri = $this->getUri();
+        $parts = explode('?', $uri, 2);
+        if (count($parts) > 1) {
+            $uri = $parts[0];
+        }
+        return $uri;
+    }
+
     /**
      * 获取指定请求头的值
      *
