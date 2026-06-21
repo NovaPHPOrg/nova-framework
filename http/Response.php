@@ -702,9 +702,9 @@ class Response extends NovaApp
      * 通过Link header实现资源预加载，优化页面加载性能
      * @param string $data HTML内容
      */
-    private function preLoad($data): void
+    private function preLoad(string $data): void
     {
-        if ($this->isHead()) {
+        if ($this->isHead() || empty($data)) {
             return;
         }
         if ($this->context->request()->isPjax()) {

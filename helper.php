@@ -193,6 +193,19 @@ function isWorkerman(): bool
  */
 function dump(...$args): void
 {
+    __dump(...$args);
+    if (isCli()) {
+        return;
+    }
+
+    throw new AppExitException(
+        Response::asHtml(ob_get_clean()),
+        "Dump variables"
+    );
+}
+
+function __dump(...$args): void
+{
     // 非调试模式直接返回
     if (!Context::instance()->isDebug()) {
         return;
@@ -215,7 +228,6 @@ function dump(...$args): void
 
         echo "\033[33m" . str_repeat('-', 80) . "\033[0m\n"; // 黄色分隔线
         echo "\n";
-        return;
     }
 
     // Web模式输出
@@ -274,11 +286,7 @@ EOF;
 
     $tpl .= '</pre></div>';
 
-    // 抛出异常以终止程序
-    throw new AppExitException(
-        Response::asHtml($tpl),
-        "Dump variables"
-    );
+    echo $tpl;
 }
 
 /**
