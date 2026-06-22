@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace nova\framework\core;
 
+use Exception;
+
 /**
  * ArgObject 类
  *
@@ -46,7 +48,7 @@ class ArgObject
      *
      * @param array|null $item 要映射到对象属性的数组数据，如果为null则使用空数组
      *
-     * @throws \Exception 当验证失败时抛出异常
+     * @throws Exception 当验证失败时抛出异常
      *
      * @example
      * ```php
@@ -124,7 +126,7 @@ class ArgObject
      *
      * @return void
      *
-     * @throws \Exception 当验证失败时抛出异常
+     * @throws Exception 当验证失败时抛出异常
      *
      * @example
      * ```php

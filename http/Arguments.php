@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace nova\framework\http;
 
+use Exception;
 use nova\framework\core\Text;
 use nova\framework\json\Json;
 use nova\framework\json\JsonDecodeException;
@@ -108,7 +109,7 @@ class Arguments
         }
         try {
             return new UploadModel($_FILES[$name]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return null;
         }
     }
