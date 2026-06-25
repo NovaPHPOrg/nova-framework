@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace nova\framework\route;
 
 use nova\framework\core\Logger;
+use nova\framework\event\EventManager;
 
 /**
  * 路由 Trait
@@ -117,6 +118,47 @@ trait RouteTrait
     {
         $this->add($uri, $mapper, "DELETE");
         return $this;
+    }
+
+    /**
+     * 注册前缀路由分发
+     *
+     * 监听 route.before 事件，URI 命中任一前缀时分发并执行匹配到的插件路由。
+     * 消除各插件 Manager 中重复的前缀拦截代码。
+     *
+     * @param string ...$prefixes 匹配的 URI 前缀，如 '/webdav'，可传多个
+     */
+    public function bindPrefixDispatch(string ...$prefixes): void
+    {
+        EventManager::addListener('route.before', function ($event, $uri) use ($prefixes) {
+            foreach ($prefixes as $prefix) {
+                if (str_starts_with($uri, $prefix)) {
+                    $this->runMatchedRoute($uri);
+                    return;
+                }
+            }
+        }, 500);
+    }
+
+    /**
+     * 分发并执行匹配到的插件路由（未命中静默返回）
+     */
+    private function runMatchedRoute(string $uri): void
+    {
+        $routeObj = $this->dispatch($uri, $_SERVER['REQUEST_METHOD']);
+        if ($routeObj === null) {
+            return;
+        }
+
+        try {
+            $routeObj->checkSelf();
+            $routeObj->run();
+        } catch (ControllerException $e) {
+            Logger::warning('Plugin controller exception', [
+                'uri' => $uri,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
