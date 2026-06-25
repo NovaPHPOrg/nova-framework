@@ -43,6 +43,26 @@ trait RouteTrait
     private string $root = "";
 
     /**
+     * 控制器命名空间前缀，使用 {@see map()} 时生效
+     */
+    protected string $controllerNamespace = "";
+
+    /**
+     * 用当前命名空间前缀构建插件路由对象
+     *
+     * 替代为每个插件定义独立的 RouteObject 子类。
+     *
+     * @param  string $controller 控制器名称
+     * @param  string $action     动作名称
+     * @param  array  $params     路由参数
+     * @return AbstractRouteObject
+     */
+    protected function map(string $controller, string $action, array $params = []): AbstractRouteObject
+    {
+        return PluginRouteObject::create($this->controllerNamespace, $controller, $action, $params);
+    }
+
+    /**
      * 注册同时支持GET和POST的路由
      */
     public function getOrPost(string $uri, AbstractRouteObject $mapper): self

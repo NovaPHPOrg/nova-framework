@@ -47,6 +47,9 @@ abstract class AbstractRouteObject
     /** @var array 路由参数数组 */
     public array $params = [];
 
+    /** @var string 控制器命名空间前缀，子类覆盖此值即可 */
+    protected string $controllerNamespace = '';
+
     /**
      * 构造函数
      *
@@ -64,11 +67,16 @@ abstract class AbstractRouteObject
     }
 
     /**
-     * 获取控制器类名（抽象方法，插件必须实现）
+     * 获取控制器完整类名
+     *
+     * 由 {@see $controllerNamespace} 前缀拼接控制器名得到。
      *
      * @return string 控制器完整类名
      */
-    abstract protected function getControllerClass(): string;
+    protected function getControllerClass(): string
+    {
+        return $this->controllerNamespace . ucfirst($this->controller);
+    }
 
     /**
      * 更新路由参数
