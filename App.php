@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace nova\framework;
 
 use Error;
+use Exception;
 use nova\framework\core\Context;
 use nova\framework\core\Logger;
 use nova\framework\core\NovaApp;
@@ -207,9 +208,9 @@ class App extends NovaApp
      * - 调试模式：显示详细的异常堆栈信息
      * - 生产模式：显示友好的错误提示
      *
-     * @param \Exception|\Error $e 异常对象
+     * @param Exception|Error $e 异常对象
      */
-    private function printException(\Exception|\Error $e): void
+    private function printException(Exception|Error $e): void
     {
         if ($this->context->isDebug()) {
             echo "<pre>";

@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 namespace nova\framework\core;
 
+use ErrorException;
+use Exception;
+
 /**
  * 文件操作工具类
  *
@@ -98,7 +101,7 @@ class File
 
             closedir($dir);
             return $success;
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             Logger::error('复制目录失败: ' . $e->getMessage());
             return false;
         }
@@ -116,7 +119,7 @@ class File
             try {
                 mkdir($dir, 0755, true);
                 return true;
-            } catch (\ErrorException $e) {
+            } catch (ErrorException $e) {
                 if (str_contains($e->getMessage(), 'File exists')) {
                     return true;
                 }
@@ -151,7 +154,7 @@ class File
                 return copy($src, $dest);
             }
             return false;
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             Logger::error("复制文件失败: {$src} -> {$dest} — " . $e->getMessage());
             return false;
         }
@@ -181,7 +184,7 @@ class File
      * 写入文件内容
      * @param  string     $file 文件路径
      * @param  string     $body 文件内容
-     * @throws \Exception 写入失败时抛出异常
+     * @throws Exception 写入失败时抛出异常
      */
     public static function write(string $file, string $body): void
     {
@@ -189,9 +192,9 @@ class File
             $dir = dirname($file);
             self::mkDir($dir);
             if (file_put_contents($file, $body) === false) {
-                throw new \Exception("写入文件失败");
+                throw new Exception("写入文件失败");
             }
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             Logger::error("写入文件失败: {$file} — " . $e->getMessage());
             throw $e;
         }
@@ -200,7 +203,7 @@ class File
     /**
      * 删除文件或目录
      * @param  string     $dir 文件或目录路径
-     * @throws \Exception 删除失败时抛出异常
+     * @throws Exception 删除失败时抛出异常
      */
     public static function del(string $dir, bool $onlyFile = false): void
     {
@@ -228,7 +231,7 @@ class File
             } else {
                 unlink($dir);
             }
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             if (str_contains($e->getMessage(), 'No such file or directory')) {
                 return;
             }

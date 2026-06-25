@@ -11,7 +11,10 @@ declare(strict_types=1);
 namespace nova\framework\cache;
 
 use ErrorException;
+use FilesystemIterator;
 use nova\framework\core\File;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 /**
  * 文件缓存驱动类
@@ -358,8 +361,8 @@ class FileCacheDriver implements iCacheDriver
         }
 
         // 递归遍历目录
-        $iter = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)
+        $iter = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
         );
 
         $n = 0;

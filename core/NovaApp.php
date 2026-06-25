@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace nova\framework\core;
 
+use Exception;
+
 /**
  * Nova 应用程序主类
  *
@@ -39,7 +41,7 @@ class NovaApp
      * 初始化 NovaApp 实例，创建并设置应用程序上下文。
      * 在应用程序启动时自动调用。
      *
-     * @throws \Exception 当上下文初始化失败时抛出异常
+     * @throws Exception 当上下文初始化失败时抛出异常
      */
     public function __construct()
     {
