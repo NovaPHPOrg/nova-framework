@@ -52,9 +52,9 @@ trait RouteTrait
      *
      * 替代为每个插件定义独立的 RouteObject 子类。
      *
-     * @param  string $controller 控制器名称
-     * @param  string $action     动作名称
-     * @param  array  $params     路由参数
+     * @param  string              $controller 控制器名称
+     * @param  string              $action     动作名称
+     * @param  array               $params     路由参数
      * @return AbstractRouteObject
      */
     protected function map(string $controller, string $action, array $params = []): AbstractRouteObject
