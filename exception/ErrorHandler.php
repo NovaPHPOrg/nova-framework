@@ -13,11 +13,13 @@ declare(strict_types=1);
 namespace nova\framework\exception;
 
 use ErrorException;
+
+use function mb_strlen;
+use function mb_substr;
+
 use nova\framework\core\Context;
 use nova\framework\http\Response;
 use Throwable;
-use function mb_strlen;
-use function mb_substr;
 
 /**
  * 错误处理器类

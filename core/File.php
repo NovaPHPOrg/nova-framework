@@ -182,8 +182,8 @@ class File
 
     /**
      * 写入文件内容
-     * @param  string     $file 文件路径
-     * @param  string     $body 文件内容
+     * @param  string    $file 文件路径
+     * @param  string    $body 文件内容
      * @throws Exception 写入失败时抛出异常
      */
     public static function write(string $file, string $body): void
@@ -202,7 +202,7 @@ class File
 
     /**
      * 删除文件或目录
-     * @param  string     $dir 文件或目录路径
+     * @param  string    $dir 文件或目录路径
      * @throws Exception 删除失败时抛出异常
      */
     public static function del(string $dir, bool $onlyFile = false): void
