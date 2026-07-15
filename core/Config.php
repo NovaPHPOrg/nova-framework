@@ -71,13 +71,7 @@ class Config
     private function loadConfig(): void
     {
         if (file_exists($this->configPath)) {
-            if (class_exists('Workerman\Worker', false)) {
-                $contents = file_get_contents($this->configPath);
-                $this->config = eval('?>' . $contents);
-            } else {
-                $this->config = require $this->configPath;
-            }
-
+            $this->config = require $this->configPath;
         } else {
             $exampleConfigPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
             if (!file_exists($exampleConfigPath)) {
