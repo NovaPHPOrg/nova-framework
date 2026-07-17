@@ -82,9 +82,11 @@ class ConfigObject extends Instance
     private function map(array $cfg): void
     {
         foreach ($cfg as $k => $v) {
-            if (property_exists($this, $k)) {
-                $this->$k = $v;
+            if (!property_exists($this, $k)) {
+                continue;
             }
+            // 配置文件/表单都是弱类型，按属性默认值做强制转换
+            $this->$k = Text::parseType($this->$k, $v);
         }
     }
 
