@@ -94,7 +94,13 @@ class Arguments
      */
     public static function raw(): ?string
     {
-        return file_get_contents("php://input") ?? null;
+        if (array_key_exists('__NOVA_HTTP_RAW_BODY', $GLOBALS)) {
+            $body = $GLOBALS['__NOVA_HTTP_RAW_BODY'];
+            return is_string($body) ? $body : null;
+        }
+
+        $raw = file_get_contents('php://input');
+        return $raw === false ? null : $raw;
     }
 
     /**
