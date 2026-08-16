@@ -48,6 +48,13 @@ class Config
     private string $configPath;
 
     private string $configHash;
+
+    /**
+     * @var array<string, mixed> 进程启动时从磁盘加载的原始配置快照
+     *                           用于保存时 diff 出本进程真正改动过的顶层节点
+     */
+    private array $initialConfig = [];
+
     /**
      * 构造函数
      * 初始化配置文件路径，加载配置文件内容，并计算初始哈希值
@@ -59,7 +66,28 @@ class Config
         $this->configPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "config.php";
         $this->loadConfig();
         $this->configHash = md5(json_encode($this->config));
+        $this->initialConfig = $this->config;
 
+    }
+
+    /**
+     * 从磁盘读取最新的配置数组
+     *
+     * Workerman 等长驻进程下，Zend OPcache 可能仍缓存着旧的 config.php 编译结果，
+     * 读取前强制失效，保证拿到磁盘上的最新配置（未启用 opcache 时为无操作）
+     *
+     * @return array<string, mixed> 磁盘上的配置数组，文件不存在时返回空数组
+     */
+    private function readDisk(): array
+    {
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($this->configPath, true);
+        }
+        if (!file_exists($this->configPath)) {
+            return [];
+        }
+        $config = require $this->configPath;
+        return is_array($config) ? $config : [];
     }
 
     /**
@@ -71,7 +99,7 @@ class Config
     private function loadConfig(): void
     {
         if (file_exists($this->configPath)) {
-            $this->config = require $this->configPath;
+            $this->config = $this->readDisk();
         } else {
             $exampleConfigPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
             if (!file_exists($exampleConfigPath)) {
@@ -195,19 +223,57 @@ class Config
 
     /**
      * 保存配置到文件
-     * 将当前配置数组序列化并保存到配置文件中
-     * 仅当配置发生变化时才会执行写入操作
+     * 仅当配置发生变化时才会执行写入操作。
+     * 写入前先重新读取磁盘上的最新配置，只把本进程改动过的顶层节点合并进去，
+     * 避免长驻进程（Workerman）下用启动时的旧快照整体覆盖其他进程刚保存的值。
      *
      * @throws RuntimeException 当文件写入失败时抛出异常
      */
     private function saveConfig(): void
     {
-        if ($this->configHash !== md5(json_encode($this->config))) {
-            Logger::debug("Config changed: {$this->configHash},", $this->config);
-            $content = "<?php\nreturn " . var_export($this->config, true) . ";";
-            if (file_put_contents($this->configPath, $content) === false) {
-                throw new RuntimeException("无法保存配置文件：{$this->configPath}");
-            }
+        $hash = md5(json_encode($this->config));
+        if ($this->configHash === $hash) {
+            return;
+        }
+
+        // diff 出本进程真正改动过的顶层节点
+        $changed = array_filter($this->config, function ($value, $key) {
+            return !array_key_exists($key, $this->initialConfig) || $this->initialConfig[$key] !== $value;
+        }, ARRAY_FILTER_USE_BOTH);
+        if ($changed === []) {
+            $this->configHash = $hash;
+            return;
+        }
+
+        // 基于磁盘最新配置做合并，而不是用内存快照整体覆盖：
+        // Workerman 多 worker / 长驻进程下，其他进程可能在本进程运行期间保存过配置，
+        // 整体覆盖会把那些新值抹掉（表现为“保存后再刷新配置没生效”）
+        $disk = $this->readDisk();
+        foreach ($changed as $key => $value) {
+            $disk[$key] = $value;
+        }
+
+        $newHash = md5(json_encode($disk));
+        if ($newHash === md5(json_encode($this->readDisk()))) {
+            // 磁盘上已经是要写入的内容（例如其他进程已保存过相同值）
+            $this->config = $disk;
+            $this->initialConfig = $disk;
+            $this->configHash = $newHash;
+            return;
+        }
+
+        Logger::debug("Config changed: {$this->configHash},", array_keys($changed));
+        $content = "<?php\nreturn " . var_export($disk, true) . ";";
+        // 多进程（Workerman 多 worker）并发写时加独占锁，避免写入交错损坏文件
+        if (file_put_contents($this->configPath, $content, LOCK_EX) === false) {
+            throw new RuntimeException("无法保存配置文件：{$this->configPath}");
+        }
+        $this->config = $disk;
+        $this->initialConfig = $disk;
+        $this->configHash = $newHash;
+        // 让 OPcache 立即感知文件变化，防止后续请求 require 到旧的编译缓存
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($this->configPath, true);
         }
 
     }

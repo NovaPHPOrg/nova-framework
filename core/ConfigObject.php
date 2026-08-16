@@ -23,6 +23,11 @@ class ConfigObject extends Instance
     private string $node;
 
     /**
+     * @var string 加载完成时的配置哈希，用于析构时检测是否真的发生过修改
+     */
+    private string $initialHash;
+
+    /**
      * 构造函数
      *
      * 初始化配置对象，自动推导节点名，设置配置文件路径，
@@ -34,6 +39,7 @@ class ConfigObject extends Instance
     {
         $this->node = $this->inferNode();
         $this->loadConfig();
+        $this->initialHash = (string)$this;
     }
 
     /**
@@ -48,7 +54,7 @@ class ConfigObject extends Instance
     {
         $cfg = get_object_vars($this);
         // 移除内部私有变量，这些不属于配置数据
-        unset($cfg['node']);
+        unset($cfg['node'], $cfg['initialHash']);
         return $cfg;
     }
 
@@ -95,11 +101,15 @@ class ConfigObject extends Instance
      *
      * 对象销毁时自动检测配置是否发生变化，如果有变化则自动保存到配置文件。
      * 通过比较当前配置的MD5哈希值与初始哈希值来判断是否需要保存。
+     * 未修改时不回写，避免长驻进程（Workerman）下旧实例把并发保存的新配置覆盖掉。
      *
      * @throws RuntimeException 当无法保存配置文件时抛出异常
      */
     public function __destruct()
     {
+        if ((string)$this === $this->initialHash) {
+            return;
+        }
         $cfg  = $this->getConfig();
         Context::instance()->config()->set($this->node, $cfg);
     }
