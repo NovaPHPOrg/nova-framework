@@ -197,9 +197,12 @@ class Context
      */
     public function checkDomain(): void
     {
-        $domains = $this->config->get("domain");
-        $serverName = $_SERVER["HTTP_HOST"];
-        if (!in_array("0.0.0.0", $domains) && !in_array($serverName, $domains)) {
+        $domains = $this->config->get("domain", ["0.0.0.0"]);
+        if (!is_array($domains) || $domains === []) {
+            $domains = ["0.0.0.0"];
+        }
+        $serverName = $_SERVER["HTTP_HOST"] ?? "";
+        if (!in_array("0.0.0.0", $domains, true) && !in_array($serverName, $domains, true)) {
             exit("[ NovaPHP ] Domain Error ：" . htmlspecialchars($serverName) . " not in config.domain list.");
         }
     }

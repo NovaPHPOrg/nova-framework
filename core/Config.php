@@ -65,9 +65,6 @@ class Config
     {
         $this->configPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "config.php";
         $this->loadConfig();
-        $this->configHash = md5(json_encode($this->config));
-        $this->initialConfig = $this->config;
-
     }
 
     /**
@@ -98,15 +95,37 @@ class Config
      */
     private function loadConfig(): void
     {
+        $example = $this->readExampleConfig();
         if (file_exists($this->configPath)) {
             $this->config = $this->readDisk();
+        } elseif ($example !== []) {
+            $this->config = $example;
         } else {
-            $exampleConfigPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
-            if (!file_exists($exampleConfigPath)) {
-                exit("配置文件不存在：config.php");
-            }
-            $this->config = require $exampleConfigPath;
+            exit("配置文件不存在：config.php");
         }
+
+        // 快照必须是磁盘原样。缺键补齐算本进程改动，析构时才能写回去，
+        // 否则首次安装只落了 db/login 的残缺 config.php 会永远缺 domain。
+        $this->initialConfig = $this->config;
+        foreach ($example as $key => $value) {
+            if (!array_key_exists($key, $this->config)) {
+                $this->config[$key] = $value;
+            }
+        }
+        $this->configHash = md5(json_encode($this->initialConfig));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readExampleConfig(): array
+    {
+        $path = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
+        if (!file_exists($path)) {
+            return [];
+        }
+        $config = require $path;
+        return is_array($config) ? $config : [];
     }
 
     /**
@@ -249,8 +268,14 @@ class Config
         // Workerman 多 worker / 长驻进程下，其他进程可能在本进程运行期间保存过配置，
         // 整体覆盖会把那些新值抹掉（表现为“保存后再刷新配置没生效”）
         $disk = $this->readDisk();
-        foreach ($changed as $key => $value) {
-            $disk[$key] = $value;
+        if ($disk === []) {
+            // config.php 还不存在：changed 只含本进程改过的顶层键，
+            // 直接合并会丢掉 example 里的 domain / framework_start。
+            $disk = $this->config;
+        } else {
+            foreach ($changed as $key => $value) {
+                $disk[$key] = $value;
+            }
         }
 
         $newHash = md5(json_encode($disk));
