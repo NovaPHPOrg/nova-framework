@@ -11,8 +11,10 @@ declare(strict_types=1);
 namespace nova\framework\cache;
 
 use ErrorException;
+use Throwable;
 use FilesystemIterator;
 use nova\framework\core\File;
+use nova\framework\core\Logger;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
@@ -231,7 +233,8 @@ class FileCacheDriver implements iCacheDriver
 
             return [$origKey, $value];
 
-        } catch (ErrorException $exception) {
+        } catch (Throwable $exception) {
+            Logger::warning("Cache read failed, delete file: {$file} : " . $exception->getMessage());
             File::del($file, true);
             return [$file, $default];
         } finally {
@@ -447,7 +450,12 @@ class FileCacheDriver implements iCacheDriver
         }
 
         foreach ($files as $fileInfo) {
-            [$key, $value] = $this->readFileWithKey($fileInfo);
+            try {
+                [$key, $value] = $this->readFileWithKey($fileInfo);
+            } catch (Throwable $exception) {
+                Logger::warning("Cache getAll skip file: {$fileInfo} : " . $exception->getMessage());
+                continue;
+            }
             if ($value === null) {
                 continue;
             }
