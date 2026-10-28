@@ -11,12 +11,12 @@ declare(strict_types=1);
 namespace nova\framework\cache;
 
 use ErrorException;
-use Throwable;
 use FilesystemIterator;
 use nova\framework\core\File;
 use nova\framework\core\Logger;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Throwable;
 
 /**
  * 文件缓存驱动类
