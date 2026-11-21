@@ -237,13 +237,13 @@ class Config
         }
 
         $config = $value;
-
+        // 直接 set 也必须立刻落盘，不能只靠析构（Workerman）
+        $this->save();
     }
 
     /**
-     * 立刻落盘。Workerman 下不要只靠析构——请求结束顺序不保证能写到。
-     *
-     * 规则：没改动不写；有改动则读磁盘 → 只合并本进程改过的顶层键 → 一把 LOCK_EX 写入。
+     * 立刻落盘。
+     * 没改动不写；有改动则读磁盘 → 只合并本进程改过的顶层键 → 一把 LOCK_EX 写入。
      */
     public function save(): void
     {

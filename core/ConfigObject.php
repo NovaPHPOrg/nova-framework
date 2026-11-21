@@ -110,10 +110,8 @@ class ConfigObject extends Instance
         if ((string)$this === $this->initialHash) {
             return;
         }
-        $config = Context::instance()->config();
-        $config->set($this->node, $this->getConfig());
-        // 显式落盘：Workerman 下不能指望 Config 析构顺序
-        $config->save();
+        // set() 内部会立刻 save()
+        Context::instance()->config()->set($this->node, $this->getConfig());
     }
 
     /**
