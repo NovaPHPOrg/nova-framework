@@ -37,26 +37,29 @@ class Config
 {
     /**
      * @var array<string, mixed> 存储配置数据的数组
+     *                           支持多维数组结构，用于存储所有配置信息
      */
     protected array $config = [];
-
     /**
      * @var string 配置文件路径
+     *             默认为项目根目录下的config.php文件
+     *             如果config.php不存在，将尝试加载example.config.php
      */
     private string $configPath;
 
-    /**
-     * @var int 加载 config.php 时的文件修改时间戳，-1 表示磁盘上不存在该文件
-     */
-    private int $initialMtime = -1;
+    private string $configHash;
 
     /**
-     * @var string 加载时（example 补齐前）的配置哈希；与当前内存不一致才写盘
+     * @var array<string, mixed> 进程启动时从磁盘加载的原始配置快照
+     *                           用于保存时 diff 出本进程真正改动过的顶层节点
      */
-    private string $configHash = '';
+    private array $initialConfig = [];
 
     /**
      * 构造函数
+     * 初始化配置文件路径，加载配置文件内容，并计算初始哈希值
+     *
+     * @throws RuntimeException 当配置文件加载失败时抛出
      */
     public function __construct()
     {
@@ -80,36 +83,36 @@ class Config
         if (!file_exists($this->configPath)) {
             return [];
         }
-        clearstatcache(true, $this->configPath);
         $config = require $this->configPath;
         return is_array($config) ? $config : [];
     }
 
     /**
      * 加载配置文件
+     * 首先尝试加载config.php，如果不存在则尝试加载example.config.php
+     *
+     * @throws RuntimeException 当两个配置文件都不存在时抛出异常
      */
     private function loadConfig(): void
     {
         $example = $this->readExampleConfig();
-
         if (file_exists($this->configPath)) {
             $this->config = $this->readDisk();
-            $this->initialMtime = (int)filemtime($this->configPath);
         } elseif ($example !== []) {
             $this->config = $example;
-            $this->initialMtime = -1;
         } else {
             exit("配置文件不存在：config.php");
         }
 
-        // 哈希必须是磁盘原样。缺键补齐算本进程改动，析构时才能写回去。
-        $this->configHash = md5(json_encode($this->config));
-
+        // 快照必须是磁盘原样。缺键补齐算本进程改动，析构时才能写回去，
+        // 否则首次安装只落了 db/login 的残缺 config.php 会永远缺 domain。
+        $this->initialConfig = $this->config;
         foreach ($example as $key => $value) {
             if (!array_key_exists($key, $this->config)) {
                 $this->config[$key] = $value;
             }
         }
+        $this->configHash = md5(json_encode($this->initialConfig));
     }
 
     /**
@@ -128,9 +131,20 @@ class Config
     /**
      * 递归合并配置数组
      * 将新的配置数组合并到现有配置中，支持深度合并
+     * 如果目标路径不存在或不是数组，将创建新数组
      *
      * @param string               $path  配置路径，使用点号分隔
      * @param array<string, mixed> $value 要合并的配置数组
+     *
+     * @example
+     * ```php
+     * $config->merge('database', [
+     *     'mysql' => [
+     *         'host' => 'localhost',
+     *         'port' => 3306
+     *     ]
+     * ]);
+     * ```
      */
     public function merge(string $path, array $value): void
     {
@@ -149,7 +163,15 @@ class Config
      *
      * @param  string $path    配置路径，使用点号分隔，如：'db.host'
      * @param  mixed  $default 当配置项不存在时返回的默认值
-     * @return mixed
+     * @return mixed  返回查找到的配置值，如果未找到则返回默认值
+     *
+     * @example
+     * ```php
+     * // 获取数据库主机配置
+     * $host = $config->get('database.mysql.host', 'localhost');
+     * // 获取完整的数据库配置
+     * $dbConfig = $config->get('database');
+     * ```
      */
     public function get(string $path, mixed $default = null): mixed
     {
@@ -169,6 +191,10 @@ class Config
     /**
      * 递归合并两个数组
      * 支持深度合并，如果键存在且都是数组则递归合并，否则用新值覆盖
+     *
+     * @param  array<string, mixed> $original 原始数组
+     * @param  array<string, mixed> $new      新数组
+     * @return array<string, mixed> 返回合并后的数组
      */
     private function mergeArrays(array $original, array $new): array
     {
@@ -185,9 +211,18 @@ class Config
     /**
      * 设置配置值
      * 支持使用点号分隔的路径设置多层级配置
+     * 如果路径中的键不存在，将自动创建对应的数组结构
      *
-     * @param string $path  配置路径，使用点号分隔
-     * @param mixed  $value 要设置的配置值
+     * @param string $path  配置路径，使用点号分隔，如：'db.host'
+     * @param mixed  $value 要设置的配置值，可以是任意类型
+     *
+     * @example
+     * ```php
+     * // 设置数据库主机
+     * $config->set('database.mysql.host', 'localhost');
+     * // 设置完整的邮件配置
+     * $config->set('mail', ['host' => 'smtp.example.com', 'port' => 587]);
+     * ```
      */
     public function set(string $path, mixed $value): void
     {
@@ -202,14 +237,14 @@ class Config
         }
 
         $config = $value;
+
     }
 
     /**
      * 保存配置到文件
-     *
-     * 仅当内存相对加载快照有变化，且磁盘未被外部改过时才写入。
-     * 磁盘 mtime 比快照新 → 放弃写入，避免覆盖他人修改。
-     * 注意：必须用 `>` 而不是 `>=`，否则「无人改动」也会永远不落盘。
+     * 仅当配置发生变化时才会执行写入操作。
+     * 写入前先重新读取磁盘上的最新配置，只把本进程改动过的顶层节点合并进去，
+     * 避免长驻进程（Workerman）下用启动时的旧快照整体覆盖其他进程刚保存的值。
      *
      * @throws RuntimeException 当文件写入失败时抛出异常
      */
@@ -220,72 +255,58 @@ class Config
             return;
         }
 
-        clearstatcache(true, $this->configPath);
-        if (!file_exists($this->configPath)) {
-            $this->writeConfig();
-            $this->afterWrite($hash);
+        // diff 出本进程真正改动过的顶层节点
+        $changed = array_filter($this->config, function ($value, $key) {
+            return !array_key_exists($key, $this->initialConfig) || $this->initialConfig[$key] !== $value;
+        }, ARRAY_FILTER_USE_BOTH);
+        if ($changed === []) {
+            $this->configHash = $hash;
             return;
         }
 
-        $diskMtime = (int)filemtime($this->configPath);
-        // 磁盘比我们的快照更新，说明被其他进程或手动编辑改过，放弃写入
-        if ($diskMtime > $this->initialMtime) {
+        // 基于磁盘最新配置做合并，而不是用内存快照整体覆盖：
+        // Workerman 多 worker / 长驻进程下，其他进程可能在本进程运行期间保存过配置，
+        // 整体覆盖会把那些新值抹掉（表现为“保存后再刷新配置没生效”）
+        $disk = $this->readDisk();
+        if ($disk === []) {
+            // config.php 还不存在：changed 只含本进程改过的顶层键，
+            // 直接合并会丢掉 example 里的 domain / framework_start。
+            $disk = $this->config;
+        } else {
+            foreach ($changed as $key => $value) {
+                $disk[$key] = $value;
+            }
+        }
+
+        $newHash = md5(json_encode($disk));
+        if ($newHash === md5(json_encode($this->readDisk()))) {
+            // 磁盘上已经是要写入的内容（例如其他进程已保存过相同值）
+            $this->config = $disk;
+            $this->initialConfig = $disk;
+            $this->configHash = $newHash;
             return;
         }
 
-        $this->writeConfig();
-        $this->afterWrite($hash);
-    }
-
-    /**
-     * 将配置写入磁盘
-     *
-     * 只用 flock + fwrite。禁止再叠 file_put_contents(LOCK_EX)：
-     * 同进程已持有 LOCK_EX 时再要一把会自锁死（Workerman 下表现为整站超时）。
-     */
-    private function writeConfig(): void
-    {
-        $content = "<?php\nreturn " . var_export($this->config, true) . ";";
-
-        $fp = @fopen($this->configPath, 'c');
-        if ($fp === false) {
+        Logger::debug("Config changed: {$this->configHash},", array_keys($changed));
+        $content = "<?php\nreturn " . var_export($disk, true) . ";";
+        // 多进程（Workerman 多 worker）并发写时加独占锁，避免写入交错损坏文件
+        if (file_put_contents($this->configPath, $content, LOCK_EX) === false) {
             throw new RuntimeException("无法保存配置文件：{$this->configPath}");
         }
-
-        try {
-            if (!flock($fp, LOCK_EX)) {
-                throw new RuntimeException("无法锁定配置文件：{$this->configPath}");
-            }
-            if (!ftruncate($fp, 0) || fseek($fp, 0) !== 0) {
-                throw new RuntimeException("无法重置配置文件：{$this->configPath}");
-            }
-            $written = fwrite($fp, $content);
-            if ($written === false || $written !== strlen($content)) {
-                throw new RuntimeException("无法保存配置文件：{$this->configPath}");
-            }
-            fflush($fp);
-            flock($fp, LOCK_UN);
-        } finally {
-            fclose($fp);
-        }
-
+        $this->config = $disk;
+        $this->initialConfig = $disk;
+        $this->configHash = $newHash;
+        // 让 OPcache 立即感知文件变化，防止后续请求 require 到旧的编译缓存
         if (function_exists('opcache_invalidate')) {
             @opcache_invalidate($this->configPath, true);
         }
-    }
 
-    private function afterWrite(string $hash): void
-    {
-        clearstatcache(true, $this->configPath);
-        $this->initialMtime = file_exists($this->configPath)
-            ? (int)filemtime($this->configPath)
-            : -1;
-        $this->configHash = $hash;
     }
 
     /**
      * 析构函数
      * 在对象销毁时自动保存配置到文件
+     * 仅当配置发生变化时才会写入文件
      */
     public function __destruct()
     {
@@ -294,6 +315,8 @@ class Config
 
     /**
      * 获取完整的配置数组
+     *
+     * @return array<string, mixed> 返回当前所有配置的数组副本
      */
     public function all(): array
     {
