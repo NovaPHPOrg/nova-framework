@@ -239,25 +239,34 @@ class Config
 
     /**
      * 将配置写入磁盘
+     *
+     * 只用 flock + fwrite。禁止再叠 file_put_contents(LOCK_EX)：
+     * 同进程已持有 LOCK_EX 时再要一把会自锁死（Workerman 下表现为整站超时）。
      */
     private function writeConfig(): void
     {
         $content = "<?php\nreturn " . var_export($this->config, true) . ";";
 
         $fp = @fopen($this->configPath, 'c');
-        if ($fp) {
-            flock($fp, LOCK_EX);
+        if ($fp === false) {
+            throw new RuntimeException("无法保存配置文件：{$this->configPath}");
         }
 
         try {
-            if (file_put_contents($this->configPath, $content, LOCK_EX) === false) {
+            if (!flock($fp, LOCK_EX)) {
+                throw new RuntimeException("无法锁定配置文件：{$this->configPath}");
+            }
+            if (!ftruncate($fp, 0) || fseek($fp, 0) !== 0) {
+                throw new RuntimeException("无法重置配置文件：{$this->configPath}");
+            }
+            $written = fwrite($fp, $content);
+            if ($written === false || $written !== strlen($content)) {
                 throw new RuntimeException("无法保存配置文件：{$this->configPath}");
             }
+            fflush($fp);
+            flock($fp, LOCK_UN);
         } finally {
-            if ($fp) {
-                flock($fp, LOCK_UN);
-                fclose($fp);
-            }
+            fclose($fp);
         }
 
         if (function_exists('opcache_invalidate')) {
