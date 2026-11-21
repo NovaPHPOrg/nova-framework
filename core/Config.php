@@ -51,6 +51,11 @@ class Config
     private int $initialMtime = -1;
 
     /**
+     * @var string 加载时（example 补齐前）的配置哈希；与当前内存不一致才写盘
+     */
+    private string $configHash = '';
+
+    /**
      * 构造函数
      */
     public function __construct()
@@ -96,6 +101,9 @@ class Config
         } else {
             exit("配置文件不存在：config.php");
         }
+
+        // 哈希必须是磁盘原样。缺键补齐算本进程改动，析构时才能写回去。
+        $this->configHash = md5(json_encode($this->config));
 
         foreach ($example as $key => $value) {
             if (!array_key_exists($key, $this->config)) {
@@ -199,27 +207,34 @@ class Config
     /**
      * 保存配置到文件
      *
-     * 仅当配置发生变化且磁盘未被外部修改时才写入。
-     * 通过比较文件修改时间戳来判断磁盘是否被其他进程/手动编辑更新过。
-     * 如果磁盘比我们的快照更新，直接放弃写入，避免覆盖他人的修改。
+     * 仅当内存相对加载快照有变化，且磁盘未被外部改过时才写入。
+     * 磁盘 mtime 比快照新 → 放弃写入，避免覆盖他人修改。
+     * 注意：必须用 `>` 而不是 `>=`，否则「无人改动」也会永远不落盘。
      *
      * @throws RuntimeException 当文件写入失败时抛出异常
      */
     private function saveConfig(): void
     {
+        $hash = md5(json_encode($this->config));
+        if ($this->configHash === $hash) {
+            return;
+        }
+
         clearstatcache(true, $this->configPath);
         if (!file_exists($this->configPath)) {
             $this->writeConfig();
+            $this->afterWrite($hash);
             return;
         }
 
         $diskMtime = (int)filemtime($this->configPath);
         // 磁盘比我们的快照更新，说明被其他进程或手动编辑改过，放弃写入
-        if ($diskMtime >= $this->initialMtime) {
+        if ($diskMtime > $this->initialMtime) {
             return;
         }
 
         $this->writeConfig();
+        $this->afterWrite($hash);
     }
 
     /**
@@ -248,6 +263,15 @@ class Config
         if (function_exists('opcache_invalidate')) {
             @opcache_invalidate($this->configPath, true);
         }
+    }
+
+    private function afterWrite(string $hash): void
+    {
+        clearstatcache(true, $this->configPath);
+        $this->initialMtime = file_exists($this->configPath)
+            ? (int)filemtime($this->configPath)
+            : -1;
+        $this->configHash = $hash;
     }
 
     /**
