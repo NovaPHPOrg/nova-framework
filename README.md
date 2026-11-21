@@ -130,14 +130,24 @@ class Main extends Controller
 
 ### 配置管理
 
+配置双源：
+
+- `config.php`：部署级键（`debug`、`timezone`、`domain`、`framework_start`…）
+- `config/{node}.config.php`：对象节点（`login`、`marketplace`、`corn`…）；读时优先于主文件同名键
+
+旧单体 `config.php` 仍可直接跑；后台首次保存某节点时会自动剥出到 `config/`。
+
 ```php
 <?php
-// 获取配置
+// 获取配置（第二参数不是默认值）
 $debug = config('debug');
-$timezone = config('timezone', 'Asia/Shanghai');
+$timezone = config('timezone') ?? 'Asia/Shanghai';
 
-// 设置配置
+// 设置配置（第二参数为写入值，立刻落盘）
 config('custom.setting', 'value');
+
+// 类型化节点：LoginConfig → config/login.config.php
+$login = LoginConfig::getInstance();
 ```
 
 ### 助手函数

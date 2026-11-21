@@ -1,13 +1,5 @@
 <?php
 
-/*
- * Copyright (c) 2025. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
- * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
- * Etiam sed turpis ac ipsum condimentum fringilla. Maecenas magna.
- * Proin dapibus sapien vel ante. Aliquam erat volutpat. Pellentesque sagittis ligula eget metus.
- * Vestibulum commodo. Ut rhoncus gravida arcu.
- */
-
 declare(strict_types=1);
 
 namespace nova\framework\core;
@@ -15,104 +7,103 @@ namespace nova\framework\core;
 use RuntimeException;
 
 /**
- * 配置管理类
+ * 配置管理：主文件 + config/{node}.config.php 双源。
  *
- * 用于管理应用程序的配置信息，提供完整的配置管理功能：
- * - 配置文件的加载和保存
- * - 多层级配置的读取和设置
- * - 配置数组的合并操作
- * - 配置变更的自动保存
- *
- * 配置文件格式为PHP数组，支持多级嵌套结构
- * 支持点号分隔的路径访问，如：'database.mysql.host'
- *
- * 使用示例：
- * ```php
- * $config = new Config();
- * $config->set('database.host', 'localhost');
- * $value = $config->get('database.host', 'default');
- * ```
+ * - ROOT_PATH/config.php：部署级键（debug、domain、framework_start…）
+ * - CONFIG_PATH/{node}.config.php：对象节点（login、marketplace、corn…）
+ * - 读：拆分文件优先；无拆分文件时回退主文件同名键（兼容旧单体）
+ * - 写：按顶层段分流；首次写入节点时从主文件剥除该键
  */
 class Config
 {
-    /**
-     * @var array<string, mixed> 存储配置数据的数组
-     *                           支持多维数组结构，用于存储所有配置信息
-     */
+    /** @var list<string> 永远留在主 config.php 的顶层键 */
+    private const array MAIN_KEYS = [
+        'debug',
+        'timezone',
+        'version',
+        'ip',
+        'port',
+        'default_route',
+        'domain',
+        'framework_start',
+        'cache_driver',
+        'cpu_cores',
+    ];
+
+    /** @var array<string, mixed> */
     protected array $config = [];
-    /**
-     * @var string 配置文件路径
-     *             默认为项目根目录下的config.php文件
-     *             如果config.php不存在，将尝试加载example.config.php
-     */
-    private string $configPath;
 
-    private string $configHash;
+    private string $mainPath;
 
-    /**
-     * @var array<string, mixed> 进程启动时从磁盘加载的原始配置快照
-     *                           用于保存时 diff 出本进程真正改动过的顶层节点
-     */
-    private array $initialConfig = [];
+    private string $nodesDir;
 
-    /**
-     * 构造函数
-     * 初始化配置文件路径，加载配置文件内容，并计算初始哈希值
-     *
-     * @throws RuntimeException 当配置文件加载失败时抛出
-     */
+    /** @var list<string> 本进程改过的点分路径 */
+    private array $dirtyPaths = [];
+
     public function __construct()
     {
-        $this->configPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "config.php";
+        $root = $this->rootPath();
+        $this->mainPath = $root . DIRECTORY_SEPARATOR . 'config.php';
+        $this->nodesDir = defined('CONFIG_PATH') ? CONFIG_PATH : ($root . DIRECTORY_SEPARATOR . 'config');
+        $this->loadConfig();
+    }
+
+    private function rootPath(): string
+    {
+        return defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 3);
+    }
+
+    /**
+     * 先落盘未保存改动，再从磁盘重新合并加载。
+     */
+    public function reloadFromDisk(): void
+    {
+        if ($this->dirtyPaths !== []) {
+            $this->save();
+        }
         $this->loadConfig();
     }
 
     /**
-     * 从磁盘读取最新的配置数组
-     *
-     * Workerman 等长驻进程下，Zend OPcache 可能仍缓存着旧的 config.php 编译结果，
-     * 读取前强制失效，保证拿到磁盘上的最新配置（未启用 opcache 时为无操作）
-     *
-     * @return array<string, mixed> 磁盘上的配置数组，文件不存在时返回空数组
+     * @return array<string, mixed>
      */
-    private function readDisk(): array
+    private function requirePhpArray(string $path): array
     {
         if (function_exists('opcache_invalidate')) {
-            @opcache_invalidate($this->configPath, true);
+            @opcache_invalidate($path, true);
         }
-        if (!file_exists($this->configPath)) {
+        if (!is_file($path)) {
             return [];
         }
-        $config = require $this->configPath;
-        return is_array($config) ? $config : [];
+        $data = require $path;
+        return is_array($data) ? $data : [];
     }
 
     /**
-     * 加载配置文件
-     * 首先尝试加载config.php，如果不存在则尝试加载example.config.php
-     *
-     * @throws RuntimeException 当两个配置文件都不存在时抛出异常
+     * @return array<string, mixed>
      */
-    private function loadConfig(): void
+    private function readMainDisk(): array
     {
-        $example = $this->readExampleConfig();
-        if (file_exists($this->configPath)) {
-            $this->config = $this->readDisk();
-        } elseif ($example !== []) {
-            $this->config = $example;
-        } else {
-            exit("配置文件不存在：config.php");
-        }
+        return $this->requirePhpArray($this->mainPath);
+    }
 
-        // 快照必须是磁盘原样。缺键补齐算本进程改动，析构时才能写回去，
-        // 否则首次安装只落了 db/login 的残缺 config.php 会永远缺 domain。
-        $this->initialConfig = $this->config;
-        foreach ($example as $key => $value) {
-            if (!array_key_exists($key, $this->config)) {
-                $this->config[$key] = $value;
-            }
+    /**
+     * @return array<string, mixed> node => 节点数组
+     */
+    private function readSplitDisk(): array
+    {
+        if (!is_dir($this->nodesDir)) {
+            return [];
         }
-        $this->configHash = md5(json_encode($this->initialConfig));
+        $nodes = [];
+        foreach (glob($this->nodesDir . DIRECTORY_SEPARATOR . '*.config.php') ?: [] as $file) {
+            $base = basename($file, '.config.php');
+            if ($base === '' || $base === 'example') {
+                continue;
+            }
+            $nodes[$base] = $this->requirePhpArray($file);
+        }
+        return $nodes;
     }
 
     /**
@@ -120,31 +111,65 @@ class Config
      */
     private function readExampleConfig(): array
     {
-        $path = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . "example.config.php";
-        if (!file_exists($path)) {
-            return [];
+        return $this->requirePhpArray($this->rootPath() . DIRECTORY_SEPARATOR . 'example.config.php');
+    }
+
+    private function loadConfig(): void
+    {
+        $example = $this->readExampleConfig();
+        $main = $this->readMainDisk();
+        if ($main === [] && !is_file($this->mainPath)) {
+            if ($example === []) {
+                exit('配置文件不存在：config.php');
+            }
+            $main = $example;
         }
-        $config = require $path;
-        return is_array($config) ? $config : [];
+
+        $disk = $main;
+        foreach ($this->readSplitDisk() as $node => $value) {
+            $disk[$node] = $value;
+        }
+
+        $this->config = $disk;
+        $this->dirtyPaths = [];
+
+        foreach ($example as $key => $value) {
+            if (array_key_exists($key, $this->config)) {
+                continue;
+            }
+            $this->config[$key] = $value;
+            // 仅主文件键缺省时标脏写回；对象节点交给类默认值 / 首次显式保存
+            if ($this->isMainKey($key)) {
+                $this->dirtyPaths[] = $key;
+            }
+        }
+    }
+
+    private function isMainKey(string $key): bool
+    {
+        return in_array($key, self::MAIN_KEYS, true);
+    }
+
+    private function nodeFile(string $node): string
+    {
+        return $this->nodesDir . DIRECTORY_SEPARATOR . $node . '.config.php';
+    }
+
+    public function get(string $path, mixed $default = null): mixed
+    {
+        $keys = explode('.', $path);
+        $cursor = $this->config;
+        foreach ($keys as $key) {
+            if (!is_array($cursor) || !array_key_exists($key, $cursor)) {
+                return $default;
+            }
+            $cursor = $cursor[$key];
+        }
+        return $cursor;
     }
 
     /**
-     * 递归合并配置数组
-     * 将新的配置数组合并到现有配置中，支持深度合并
-     * 如果目标路径不存在或不是数组，将创建新数组
-     *
-     * @param string               $path  配置路径，使用点号分隔
-     * @param array<string, mixed> $value 要合并的配置数组
-     *
-     * @example
-     * ```php
-     * $config->merge('database', [
-     *     'mysql' => [
-     *         'host' => 'localhost',
-     *         'port' => 3306
-     *     ]
-     * ]);
-     * ```
+     * @param array<string, mixed> $value
      */
     public function merge(string $path, array $value): void
     {
@@ -152,49 +177,13 @@ class Config
         if (!is_array($original)) {
             $original = [];
         }
-
-        $merged = $this->mergeArrays($original, $value);
-        $this->set($path, $merged);
+        $this->set($path, $this->mergeArrays($original, $value));
     }
 
     /**
-     * 获取配置值
-     * 支持使用点号分隔的路径访问多层级配置
-     *
-     * @param  string $path    配置路径，使用点号分隔，如：'db.host'
-     * @param  mixed  $default 当配置项不存在时返回的默认值
-     * @return mixed  返回查找到的配置值，如果未找到则返回默认值
-     *
-     * @example
-     * ```php
-     * // 获取数据库主机配置
-     * $host = $config->get('database.mysql.host', 'localhost');
-     * // 获取完整的数据库配置
-     * $dbConfig = $config->get('database');
-     * ```
-     */
-    public function get(string $path, mixed $default = null): mixed
-    {
-        $keys = explode('.', $path);
-        $config = $this->config;
-
-        foreach ($keys as $key) {
-            if (!isset($config[$key])) {
-                return $default;
-            }
-            $config = $config[$key];
-        }
-
-        return $config;
-    }
-
-    /**
-     * 递归合并两个数组
-     * 支持深度合并，如果键存在且都是数组则递归合并，否则用新值覆盖
-     *
-     * @param  array<string, mixed> $original 原始数组
-     * @param  array<string, mixed> $new      新数组
-     * @return array<string, mixed> 返回合并后的数组
+     * @param array<string, mixed> $original
+     * @param array<string, mixed> $new
+     * @return array<string, mixed>
      */
     private function mergeArrays(array $original, array $new): array
     {
@@ -209,81 +198,178 @@ class Config
     }
 
     /**
-     * 设置配置值
-     * 支持使用点号分隔的路径设置多层级配置
-     * 如果路径中的键不存在，将自动创建对应的数组结构
-     *
-     * @param string $path  配置路径，使用点号分隔，如：'db.host'
-     * @param mixed  $value 要设置的配置值，可以是任意类型
-     *
-     * @example
-     * ```php
-     * // 设置数据库主机
-     * $config->set('database.mysql.host', 'localhost');
-     * // 设置完整的邮件配置
-     * $config->set('mail', ['host' => 'smtp.example.com', 'port' => 587]);
-     * ```
+     * @param bool $immediate false 时只改内存并标脏，由调用方统一 save
      */
-    public function set(string $path, mixed $value): void
+    public function set(string $path, mixed $value, bool $immediate = true): void
     {
-        $keys = explode('.', $path);
-        $config = &$this->config;
-
-        foreach ($keys as $key) {
-            if (!isset($config[$key])) {
-                $config[$key] = [];
-            }
-            $config = &$config[$key];
+        $this->assignPath($this->config, $path, $value);
+        if (!in_array($path, $this->dirtyPaths, true)) {
+            $this->dirtyPaths[] = $path;
         }
+        if ($immediate) {
+            $this->save();
+        }
+    }
 
-        $config = $value;
-        // 直接 set 也必须立刻落盘，不能只靠析构（Workerman）
+    /**
+     * @param array<string, mixed> $pathValues 点分路径 => 值
+     */
+    public function setMany(array $pathValues): void
+    {
+        foreach ($pathValues as $path => $value) {
+            $this->set((string)$path, $value, false);
+        }
         $this->save();
     }
 
     /**
-     * 立刻落盘。
-     * 没改动不写；有改动则读磁盘 → 只合并本进程改过的顶层键 → 一把 LOCK_EX 写入。
+     * @param array<string, mixed> $root
      */
+    private function assignPath(array &$root, string $path, mixed $value): void
+    {
+        $keys = explode('.', $path);
+        $cursor = &$root;
+        $last = array_pop($keys);
+        foreach ($keys as $key) {
+            if (!isset($cursor[$key]) || !is_array($cursor[$key])) {
+                $cursor[$key] = [];
+            }
+            $cursor = &$cursor[$key];
+        }
+        $cursor[$last] = $value;
+    }
+
+    /**
+     * @param array<string, mixed> $root
+     */
+    private function readPath(array $root, string $path): mixed
+    {
+        $keys = explode('.', $path);
+        $cursor = $root;
+        foreach ($keys as $key) {
+            if (!is_array($cursor) || !array_key_exists($key, $cursor)) {
+                return null;
+            }
+            $cursor = $cursor[$key];
+        }
+        return $cursor;
+    }
+
     public function save(): void
     {
-        $hash = md5(json_encode($this->config));
-        if ($this->configHash === $hash) {
+        if ($this->dirtyPaths === []) {
             return;
         }
 
-        $changed = [];
-        foreach ($this->config as $key => $value) {
-            if (!array_key_exists($key, $this->initialConfig) || $this->initialConfig[$key] !== $value) {
-                $changed[$key] = $value;
+        /** @var array<string, list<string>> $byTop */
+        $byTop = [];
+        foreach ($this->dirtyPaths as $path) {
+            $top = explode('.', $path, 2)[0];
+            $byTop[$top][] = $path;
+        }
+
+        $peelFromMain = [];
+        $mainTouched = false;
+
+        foreach ($byTop as $top => $paths) {
+            if ($this->isMainKey($top)) {
+                $mainTouched = true;
+                continue;
+            }
+            $this->saveNodeFile($top, $paths);
+            $peelFromMain[] = $top;
+        }
+
+        if ($mainTouched || $peelFromMain !== []) {
+            $this->saveMainFile($byTop, $peelFromMain);
+        }
+
+        $this->dirtyPaths = [];
+    }
+
+    /**
+     * @param list<string> $paths
+     */
+    private function saveNodeFile(string $node, array $paths): void
+    {
+        if (!is_dir($this->nodesDir) && !mkdir($this->nodesDir, 0755, true) && !is_dir($this->nodesDir)) {
+            throw new RuntimeException("无法创建配置目录：{$this->nodesDir}");
+        }
+
+        $file = $this->nodeFile($node);
+        $diskNode = $this->requirePhpArray($file);
+        if ($diskNode === []) {
+            $fromMain = $this->readMainDisk()[$node] ?? null;
+            if (is_array($fromMain)) {
+                $diskNode = $fromMain;
+            } elseif (isset($this->config[$node]) && is_array($this->config[$node])) {
+                $diskNode = $this->config[$node];
             }
         }
-        if ($changed === []) {
-            $this->configHash = $hash;
-            return;
+
+        foreach ($paths as $path) {
+            if ($path === $node) {
+                $value = $this->config[$node] ?? [];
+                $diskNode = is_array($value) ? $value : [];
+                continue;
+            }
+            $rest = substr($path, strlen($node) + 1);
+            $this->assignPath($diskNode, $rest, $this->readPath($this->config, $path));
         }
 
-        $disk = $this->readDisk();
-        if ($disk === []) {
-            $disk = $this->config;
-        } else {
-            foreach ($changed as $key => $value) {
-                $disk[$key] = $value;
+        $this->writePhpArray($file, $diskNode);
+        $this->config[$node] = $diskNode;
+    }
+
+    /**
+     * @param array<string, list<string>> $byTop
+     * @param list<string>                $peelFromMain
+     */
+    private function saveMainFile(array $byTop, array $peelFromMain): void
+    {
+        $disk = $this->readMainDisk();
+        if ($disk === [] && !is_file($this->mainPath)) {
+            foreach (self::MAIN_KEYS as $key) {
+                if (array_key_exists($key, $this->config)) {
+                    $disk[$key] = $this->config[$key];
+                }
             }
         }
 
-        $content = "<?php\nreturn " . var_export($disk, true) . ";";
-        if (file_put_contents($this->configPath, $content, LOCK_EX) === false) {
-            throw new RuntimeException("无法保存配置文件：{$this->configPath}");
+        foreach ($byTop as $top => $paths) {
+            if (!$this->isMainKey($top)) {
+                continue;
+            }
+            foreach ($paths as $path) {
+                $this->assignPath($disk, $path, $this->readPath($this->config, $path));
+            }
         }
 
+        foreach ($peelFromMain as $node) {
+            unset($disk[$node]);
+        }
+
+        $this->writePhpArray($this->mainPath, $disk);
+
+        foreach ($disk as $key => $value) {
+            if ($this->isMainKey((string)$key)) {
+                $this->config[$key] = $value;
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function writePhpArray(string $path, array $data): void
+    {
+        $content = "<?php\nreturn " . var_export($data, true) . ";\n";
+        if (file_put_contents($path, $content, LOCK_EX) === false) {
+            throw new RuntimeException("无法保存配置文件：{$path}");
+        }
         if (function_exists('opcache_invalidate')) {
-            @opcache_invalidate($this->configPath, true);
+            @opcache_invalidate($path, true);
         }
-
-        $this->config = $disk;
-        $this->initialConfig = $disk;
-        $this->configHash = md5(json_encode($disk));
     }
 
     public function __destruct()
@@ -292,9 +378,7 @@ class Config
     }
 
     /**
-     * 获取完整的配置数组
-     *
-     * @return array<string, mixed> 返回当前所有配置的数组副本
+     * @return array<string, mixed>
      */
     public function all(): array
     {
