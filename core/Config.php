@@ -150,6 +150,20 @@ class Config
         return in_array($key, self::MAIN_KEYS, true);
     }
 
+    /**
+     * 拆分文件只承载「对象节点」（数组）。标量顶层键（installed 等）一律进主文件。
+     */
+    private function isSplitNode(string $top): bool
+    {
+        if ($this->isMainKey($top)) {
+            return false;
+        }
+        if (is_file($this->nodeFile($top))) {
+            return true;
+        }
+        return is_array($this->config[$top] ?? null);
+    }
+
     private function nodeFile(string $node): string
     {
         return $this->nodesDir . DIRECTORY_SEPARATOR . $node . '.config.php';
@@ -272,7 +286,7 @@ class Config
         $mainTouched = false;
 
         foreach ($byTop as $top => $paths) {
-            if ($this->isMainKey($top)) {
+            if (!$this->isSplitNode($top)) {
                 $mainTouched = true;
                 continue;
             }
@@ -337,7 +351,7 @@ class Config
         }
 
         foreach ($byTop as $top => $paths) {
-            if (!$this->isMainKey($top)) {
+            if ($this->isSplitNode($top)) {
                 continue;
             }
             foreach ($paths as $path) {
@@ -352,7 +366,7 @@ class Config
         $this->writePhpArray($this->mainPath, $disk);
 
         foreach ($disk as $key => $value) {
-            if ($this->isMainKey((string)$key)) {
+            if (!$this->isSplitNode((string)$key)) {
                 $this->config[$key] = $value;
             }
         }
