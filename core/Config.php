@@ -10,8 +10,8 @@ use RuntimeException;
  * 配置：主文件 + config/{node}.config.php。
  *
  * 读：拆分文件覆盖主文件同名键（旧单体零迁移）。
- * 写：只按「顶层键」落盘——对象节点整份写入拆分文件，其余写入主文件。
- *     tempfile + rename，不加锁。example 缺键只补内存。
+ * 写：脏节点整份写入拆分文件；主文件只剥离「已经有节点文件」的键。
+ *     tempfile + rename；符号链接写到真实目标。example 缺键只补内存。
  */
 class Config
 {
@@ -90,6 +90,17 @@ class Config
         }
     }
 
+    /**
+     * @param array<string, mixed> $pathValues 点分路径 => 值
+     */
+    public function setMany(array $pathValues): void
+    {
+        foreach ($pathValues as $path => $value) {
+            $this->set((string)$path, $value, false);
+        }
+        $this->save();
+    }
+
     public function save(): void
     {
         if ($this->dirtyTops === [] || $this->saving) {
@@ -103,7 +114,6 @@ class Config
                     $this->writeNode($top);
                 }
             }
-            // 主文件始终按内存重写：带上标量变更，并剥掉已拆出的节点键
             $this->writeMain();
             $this->dirtyTops = [];
         } finally {
@@ -188,9 +198,12 @@ class Config
     {
         $out = [];
         foreach ($this->config as $key => $value) {
-            if (!$this->isNode((string)$key)) {
-                $out[$key] = $value;
+            $key = (string)$key;
+            // 没落盘的节点不许剥——否则 set(version) 会把 db/login 写丢
+            if (!in_array($key, self::MAIN_KEYS, true) && is_file($this->nodePath($key))) {
+                continue;
             }
+            $out[$key] = $value;
         }
         $this->writePhp($this->mainPath, $out);
     }
@@ -215,6 +228,13 @@ class Config
      */
     private function writePhp(string $path, array $data): void
     {
+        // Docker: config.php → /data/config.php；rename 链接本身不会写到卷里
+        if (is_link($path)) {
+            $link = readlink($path);
+            if ($link !== false && $link !== '') {
+                $path = $link[0] === '/' ? $link : dirname($path) . DIRECTORY_SEPARATOR . $link;
+            }
+        }
         $content = "<?php\nreturn " . var_export($data, true) . ";\n";
         $tmp = dirname($path) . DIRECTORY_SEPARATOR . '.' . basename($path) . '.' . getmypid() . '.' . bin2hex(random_bytes(4)) . '.tmp';
         if (file_put_contents($tmp, $content) === false) {
