@@ -7,16 +7,15 @@ namespace nova\framework\core;
 use RuntimeException;
 
 /**
- * 配置管理：主文件 + config/{node}.config.php 双源。
+ * 配置：主文件 + config/{node}.config.php。
  *
- * - ROOT_PATH/config.php：部署级键（debug、domain、framework_start…）
- * - CONFIG_PATH/{node}.config.php：对象节点（login、marketplace、corn…）
- * - 读：拆分文件优先；无拆分文件时回退主文件同名键（兼容旧单体）
- * - 写：按顶层段分流；首次写入节点时从主文件剥除该键
+ * 读：拆分文件覆盖主文件同名键（旧单体零迁移）。
+ * 写：只按「顶层键」落盘——对象节点整份写入拆分文件，其余写入主文件。
+ *     tempfile + rename，不加锁。example 缺键只补内存。
  */
 class Config
 {
-    /** @var list<string> 永远留在主 config.php 的顶层键 */
+    /** @var list<string> 即使是数组也留在主文件的键 */
     private const array MAIN_KEYS = [
         'debug',
         'timezone',
@@ -37,143 +36,31 @@ class Config
 
     private string $nodesDir;
 
-    /** @var list<string> 本进程改过的点分路径 */
-    private array $dirtyPaths = [];
+    /** @var array<string, true> 本进程改过的顶层键 */
+    private array $dirtyTops = [];
+
+    private bool $saving = false;
 
     public function __construct()
     {
-        $root = $this->rootPath();
+        $root = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 3);
         $this->mainPath = $root . DIRECTORY_SEPARATOR . 'config.php';
         $this->nodesDir = defined('CONFIG_PATH') ? CONFIG_PATH : ($root . DIRECTORY_SEPARATOR . 'config');
-        $this->loadConfig();
+        $this->load();
     }
 
-    private function rootPath(): string
-    {
-        return defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 3);
-    }
-
-    /**
-     * 先落盘未保存改动，再从磁盘重新合并加载。
-     */
     public function reloadFromDisk(): void
     {
-        if ($this->dirtyPaths !== []) {
+        if ($this->dirtyTops !== []) {
             $this->save();
         }
-        $this->loadConfig();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function requirePhpArray(string $path): array
-    {
-        if (function_exists('opcache_invalidate')) {
-            @opcache_invalidate($path, true);
-        }
-        if (!is_file($path)) {
-            return [];
-        }
-        $data = require $path;
-        return is_array($data) ? $data : [];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function readMainDisk(): array
-    {
-        return $this->requirePhpArray($this->mainPath);
-    }
-
-    /**
-     * @return array<string, mixed> node => 节点数组
-     */
-    private function readSplitDisk(): array
-    {
-        if (!is_dir($this->nodesDir)) {
-            return [];
-        }
-        $nodes = [];
-        foreach (glob($this->nodesDir . DIRECTORY_SEPARATOR . '*.config.php') ?: [] as $file) {
-            $base = basename($file, '.config.php');
-            if ($base === '' || $base === 'example') {
-                continue;
-            }
-            $nodes[$base] = $this->requirePhpArray($file);
-        }
-        return $nodes;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function readExampleConfig(): array
-    {
-        return $this->requirePhpArray($this->rootPath() . DIRECTORY_SEPARATOR . 'example.config.php');
-    }
-
-    private function loadConfig(): void
-    {
-        $example = $this->readExampleConfig();
-        $main = $this->readMainDisk();
-        if ($main === [] && !is_file($this->mainPath)) {
-            if ($example === []) {
-                exit('配置文件不存在：config.php');
-            }
-            $main = $example;
-        }
-
-        $disk = $main;
-        foreach ($this->readSplitDisk() as $node => $value) {
-            $disk[$node] = $value;
-        }
-
-        $this->config = $disk;
-        $this->dirtyPaths = [];
-
-        foreach ($example as $key => $value) {
-            if (array_key_exists($key, $this->config)) {
-                continue;
-            }
-            $this->config[$key] = $value;
-            // 仅主文件键缺省时标脏写回；对象节点交给类默认值 / 首次显式保存
-            if ($this->isMainKey($key)) {
-                $this->dirtyPaths[] = $key;
-            }
-        }
-    }
-
-    private function isMainKey(string $key): bool
-    {
-        return in_array($key, self::MAIN_KEYS, true);
-    }
-
-    /**
-     * 拆分文件只承载「对象节点」（数组）。标量顶层键（installed 等）一律进主文件。
-     */
-    private function isSplitNode(string $top): bool
-    {
-        if ($this->isMainKey($top)) {
-            return false;
-        }
-        if (is_file($this->nodeFile($top))) {
-            return true;
-        }
-        return is_array($this->config[$top] ?? null);
-    }
-
-    private function nodeFile(string $node): string
-    {
-        return $this->nodesDir . DIRECTORY_SEPARATOR . $node . '.config.php';
+        $this->load();
     }
 
     public function get(string $path, mixed $default = null): mixed
     {
-        $keys = explode('.', $path);
         $cursor = $this->config;
-        foreach ($keys as $key) {
+        foreach (explode('.', $path) as $key) {
             if (!is_array($cursor) || !array_key_exists($key, $cursor)) {
                 return $default;
             }
@@ -191,55 +78,162 @@ class Config
         if (!is_array($original)) {
             $original = [];
         }
-        $this->set($path, $this->mergeArrays($original, $value));
+        $this->set($path, array_replace_recursive($original, $value));
     }
 
-    /**
-     * @param array<string, mixed> $original
-     * @param array<string, mixed> $new
-     * @return array<string, mixed>
-     */
-    private function mergeArrays(array $original, array $new): array
-    {
-        foreach ($new as $key => $value) {
-            if (is_array($value) && isset($original[$key]) && is_array($original[$key])) {
-                $original[$key] = $this->mergeArrays($original[$key], $value);
-            } else {
-                $original[$key] = $value;
-            }
-        }
-        return $original;
-    }
-
-    /**
-     * @param bool $immediate false 时只改内存并标脏，由调用方统一 save
-     */
     public function set(string $path, mixed $value, bool $immediate = true): void
     {
-        $this->assignPath($this->config, $path, $value);
-        if (!in_array($path, $this->dirtyPaths, true)) {
-            $this->dirtyPaths[] = $path;
-        }
+        $this->assign($this->config, $path, $value);
+        $this->dirtyTops[explode('.', $path, 2)[0]] = true;
         if ($immediate) {
             $this->save();
         }
     }
 
-    /**
-     * @param array<string, mixed> $pathValues 点分路径 => 值
-     */
-    public function setMany(array $pathValues): void
+    public function save(): void
     {
-        foreach ($pathValues as $path => $value) {
-            $this->set((string)$path, $value, false);
+        if ($this->dirtyTops === [] || $this->saving) {
+            return;
         }
+
+        $this->saving = true;
+        try {
+            foreach (array_keys($this->dirtyTops) as $top) {
+                if ($this->isNode($top)) {
+                    $this->writeNode($top);
+                }
+            }
+            // 主文件始终按内存重写：带上标量变更，并剥掉已拆出的节点键
+            $this->writeMain();
+            $this->dirtyTops = [];
+        } finally {
+            $this->saving = false;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function all(): array
+    {
+        return $this->config;
+    }
+
+    public function __destruct()
+    {
         $this->save();
+    }
+
+    private function load(): void
+    {
+        $example = $this->readPhp($this->root() . DIRECTORY_SEPARATOR . 'example.config.php');
+        $main = $this->readPhp($this->mainPath);
+        if ($main === [] && !is_file($this->mainPath)) {
+            if ($example === []) {
+                exit('配置文件不存在：config.php');
+            }
+            $main = $example;
+        }
+
+        $this->config = $main;
+        if (is_dir($this->nodesDir)) {
+            foreach (glob($this->nodesDir . DIRECTORY_SEPARATOR . '*.config.php') ?: [] as $file) {
+                $node = basename($file, '.config.php');
+                if ($node === '' || $node === 'example') {
+                    continue;
+                }
+                $this->config[$node] = $this->readPhp($file);
+            }
+        }
+
+        $this->dirtyTops = [];
+        foreach ($example as $key => $value) {
+            if (!array_key_exists($key, $this->config)) {
+                $this->config[$key] = $value;
+            }
+        }
+    }
+
+    private function root(): string
+    {
+        return defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 3);
+    }
+
+    private function isNode(string $top): bool
+    {
+        if (in_array($top, self::MAIN_KEYS, true)) {
+            return false;
+        }
+        if (is_file($this->nodePath($top))) {
+            return true;
+        }
+        return is_array($this->config[$top] ?? null);
+    }
+
+    private function nodePath(string $node): string
+    {
+        return $this->nodesDir . DIRECTORY_SEPARATOR . $node . '.config.php';
+    }
+
+    private function writeNode(string $node): void
+    {
+        if (!is_dir($this->nodesDir) && !mkdir($this->nodesDir, 0755, true) && !is_dir($this->nodesDir)) {
+            throw new RuntimeException("无法创建配置目录：{$this->nodesDir}");
+        }
+        $value = $this->config[$node] ?? [];
+        $this->writePhp($this->nodePath($node), is_array($value) ? $value : []);
+    }
+
+    private function writeMain(): void
+    {
+        $out = [];
+        foreach ($this->config as $key => $value) {
+            if (!$this->isNode((string)$key)) {
+                $out[$key] = $value;
+            }
+        }
+        $this->writePhp($this->mainPath, $out);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readPhp(string $path): array
+    {
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($path, true);
+        }
+        if (!is_file($path)) {
+            return [];
+        }
+        $data = require $path;
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function writePhp(string $path, array $data): void
+    {
+        $content = "<?php\nreturn " . var_export($data, true) . ";\n";
+        $tmp = dirname($path) . DIRECTORY_SEPARATOR . '.' . basename($path) . '.' . getmypid() . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        if (file_put_contents($tmp, $content) === false) {
+            @unlink($tmp);
+            throw new RuntimeException("无法写入临时配置：{$tmp}");
+        }
+        if (!rename($tmp, $path)) {
+            @unlink($tmp);
+            throw new RuntimeException("无法保存配置文件：{$path}");
+        }
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($path, true);
+        }
     }
 
     /**
      * @param array<string, mixed> $root
      */
-    private function assignPath(array &$root, string $path, mixed $value): void
+    private function assign(array &$root, string $path, mixed $value): void
     {
         $keys = explode('.', $path);
         $cursor = &$root;
@@ -251,151 +245,5 @@ class Config
             $cursor = &$cursor[$key];
         }
         $cursor[$last] = $value;
-    }
-
-    /**
-     * @param array<string, mixed> $root
-     */
-    private function readPath(array $root, string $path): mixed
-    {
-        $keys = explode('.', $path);
-        $cursor = $root;
-        foreach ($keys as $key) {
-            if (!is_array($cursor) || !array_key_exists($key, $cursor)) {
-                return null;
-            }
-            $cursor = $cursor[$key];
-        }
-        return $cursor;
-    }
-
-    public function save(): void
-    {
-        if ($this->dirtyPaths === []) {
-            return;
-        }
-
-        /** @var array<string, list<string>> $byTop */
-        $byTop = [];
-        foreach ($this->dirtyPaths as $path) {
-            $top = explode('.', $path, 2)[0];
-            $byTop[$top][] = $path;
-        }
-
-        $peelFromMain = [];
-        $mainTouched = false;
-
-        foreach ($byTop as $top => $paths) {
-            if (!$this->isSplitNode($top)) {
-                $mainTouched = true;
-                continue;
-            }
-            $this->saveNodeFile($top, $paths);
-            $peelFromMain[] = $top;
-        }
-
-        if ($mainTouched || $peelFromMain !== []) {
-            $this->saveMainFile($byTop, $peelFromMain);
-        }
-
-        $this->dirtyPaths = [];
-    }
-
-    /**
-     * @param list<string> $paths
-     */
-    private function saveNodeFile(string $node, array $paths): void
-    {
-        if (!is_dir($this->nodesDir) && !mkdir($this->nodesDir, 0755, true) && !is_dir($this->nodesDir)) {
-            throw new RuntimeException("无法创建配置目录：{$this->nodesDir}");
-        }
-
-        $file = $this->nodeFile($node);
-        $diskNode = $this->requirePhpArray($file);
-        if ($diskNode === []) {
-            $fromMain = $this->readMainDisk()[$node] ?? null;
-            if (is_array($fromMain)) {
-                $diskNode = $fromMain;
-            } elseif (isset($this->config[$node]) && is_array($this->config[$node])) {
-                $diskNode = $this->config[$node];
-            }
-        }
-
-        foreach ($paths as $path) {
-            if ($path === $node) {
-                $value = $this->config[$node] ?? [];
-                $diskNode = is_array($value) ? $value : [];
-                continue;
-            }
-            $rest = substr($path, strlen($node) + 1);
-            $this->assignPath($diskNode, $rest, $this->readPath($this->config, $path));
-        }
-
-        $this->writePhpArray($file, $diskNode);
-        $this->config[$node] = $diskNode;
-    }
-
-    /**
-     * @param array<string, list<string>> $byTop
-     * @param list<string>                $peelFromMain
-     */
-    private function saveMainFile(array $byTop, array $peelFromMain): void
-    {
-        $disk = $this->readMainDisk();
-        if ($disk === [] && !is_file($this->mainPath)) {
-            foreach (self::MAIN_KEYS as $key) {
-                if (array_key_exists($key, $this->config)) {
-                    $disk[$key] = $this->config[$key];
-                }
-            }
-        }
-
-        foreach ($byTop as $top => $paths) {
-            if ($this->isSplitNode($top)) {
-                continue;
-            }
-            foreach ($paths as $path) {
-                $this->assignPath($disk, $path, $this->readPath($this->config, $path));
-            }
-        }
-
-        foreach ($peelFromMain as $node) {
-            unset($disk[$node]);
-        }
-
-        $this->writePhpArray($this->mainPath, $disk);
-
-        foreach ($disk as $key => $value) {
-            if (!$this->isSplitNode((string)$key)) {
-                $this->config[$key] = $value;
-            }
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private function writePhpArray(string $path, array $data): void
-    {
-        $content = "<?php\nreturn " . var_export($data, true) . ";\n";
-        if (file_put_contents($path, $content, LOCK_EX) === false) {
-            throw new RuntimeException("无法保存配置文件：{$path}");
-        }
-        if (function_exists('opcache_invalidate')) {
-            @opcache_invalidate($path, true);
-        }
-    }
-
-    public function __destruct()
-    {
-        $this->save();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function all(): array
-    {
-        return $this->config;
     }
 }
