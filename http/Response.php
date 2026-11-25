@@ -668,20 +668,27 @@ class Response extends NovaApp
                 $this->cache(60 * 24);
         }
 
-        // 设置 Last-Modified 和 ETag 头
+        // 设置 Last-Modified 和 ETag 头。
+        // Content-Length 不能在压缩前写死：压缩后的正文和原文件不一样，
+        // 再由 Workerman 补一次长度，浏览器会直接丢掉这个响应。
         $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";
         $this->header["ETag"] = $etag;
-        $this->header["Content-Length"] = (string)$fileSize;
 
-        // 发送响应头
-        $this->sendHeaders();
         if ($this->isHead()) {
+            $this->header["Content-Length"] = (string)$fileSize;
+            $this->sendHeaders();
             return;
         }
 
-        // 触发事件并输出文件内容
+        ob_start();
         $output = EventManager::trigger("response.static.before", $addr, true);
-        if ($output !== true) {
+        $replaced = ob_get_clean();
+        if ($output === true) {
+            $this->sendHeaders();
+            echo $replaced;
+        } else {
+            $this->header["Content-Length"] = (string)$fileSize;
+            $this->sendHeaders();
             $this->writeStatic($addr);
         }
 
