@@ -676,10 +676,19 @@ class Response extends NovaApp
         // 触发事件并输出文件内容
         $output = EventManager::trigger("response.static.before", $addr, true);
         if ($output !== true) {
-            readfile($addr);
+            $this->writeStatic($addr);
         }
 
         EventManager::trigger("response.static.after", $addr);
+    }
+
+    /**
+     * 输出静态文件正文。
+     * 默认整段读出。Workerman 覆盖成流式发送，避免大文件撑破内存。
+     */
+    protected function writeStatic(string $addr): void
+    {
+        readfile($addr);
     }
 
     /**
