@@ -595,6 +595,11 @@ class Response extends NovaApp
      */
     private function sendStatic(): void
     {
+        if (function_exists('apache_setenv')) {
+            @apache_setenv('no-gzip', '1');
+        }
+        @ini_set('zlib.output_compression', '0');
+
         $addr = $this->data;
         $addr = $this->filterFilePath($addr);
 
@@ -666,6 +671,7 @@ class Response extends NovaApp
         // 设置 Last-Modified 和 ETag 头
         $this->header["Last-Modified"] = gmdate("D, d M Y H:i:s", $lastModifiedTime) . " GMT";
         $this->header["ETag"] = $etag;
+        $this->header["Content-Length"] = (string)$fileSize;
 
         // 发送响应头
         $this->sendHeaders();
@@ -688,7 +694,22 @@ class Response extends NovaApp
      */
     protected function writeStatic(string $addr): void
     {
-        readfile($addr);
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+        $handle = fopen($addr, 'rb');
+        if ($handle === false) {
+            return;
+        }
+        while (!feof($handle)) {
+            $chunk = fread($handle, 1024 * 1024);
+            if ($chunk === false || $chunk === '') {
+                break;
+            }
+            echo $chunk;
+            flush();
+        }
+        fclose($handle);
     }
 
     /**
