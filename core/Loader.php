@@ -125,9 +125,12 @@ class Loader
      */
     public function autoload(string $raw): void
     {
-        // 首先检查缓存
-        if (array_key_exists($raw, $this->autoloadFilesCache)) {
-            $this->load($this->autoloadFilesCache[$raw]);
+        $root = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR;
+
+        // 缓存存的是绝对路径；项目换了目录（如按版本目录部署、runtime 共享）时旧条目作废，重新查找并覆盖
+        $cached = $this->autoloadFilesCache[$raw] ?? '';
+        if (str_starts_with($cached, $root)) {
+            $this->load($cached);
             return;
         }
 
@@ -145,7 +148,7 @@ class Loader
                 DIRECTORY_SEPARATOR,
                 str_replace($prefix, $replace, $raw)
             ) . ".php";
-            $file = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . $realClass;
+            $file = $root . $realClass;
 
             // 如果文件存在，则加载并缓存
             if (file_exists($file)) {
